@@ -12,10 +12,8 @@ jobs:
       uses: actions/checkout@v1
       with:
         submodules: recursive
-    - name: Checkout github repo (+ download lfs dependencies)
+    - name: Checkout github repo
       uses: actions/checkout@v2
-      with:
-        lfs: true
     - name: Checkout LFS objects
       run: git lfs checkout
     - name: Set up Python ${{ matrix.python-version }}
