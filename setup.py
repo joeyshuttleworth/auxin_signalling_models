@@ -46,6 +46,9 @@ setup(
         'regex>=2023.12.25',
         'openpyxl>=3.1.2',
         'jinja2>=3.1.0',
+        'seaborn>=0.12',
+        'networkx>=3.0',
+        'pyvis>=0.3.0'
     ],
     extras_require={
         'test': [
