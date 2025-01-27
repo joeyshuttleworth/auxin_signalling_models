@@ -5,12 +5,13 @@ import os
 import unittest
 
 import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import seaborn as sns
 import sympy as sp
-import networkx as nx
 
-from auxin_signalling_pathway.auxin_signalling_pathway import auxin_signalling_pathway as asp_class
+from auxin_signalling_pathway.auxin_signalling_pathway import \
+    auxin_signalling_pathway as asp_class
 
 
 def setup_output_directory(dir_name, subdir_name):
@@ -25,7 +26,8 @@ def setup_output_directory(dir_name, subdir_name):
 class TestGeneratePathway(unittest.TestCase):
 
     def setUp(self):
-        test_output_dir = setup_output_directory('test_output', f"{type(self).__name__}")
+        test_output_dir = setup_output_directory(
+            'test_output', f"{type(self).__name__}")
         self.output_dir = test_output_dir
 
         self.model_names = [f"model{i}" for i in range(15)]
@@ -49,7 +51,6 @@ class TestGeneratePathway(unittest.TestCase):
                 fout.write(str(nx.write_network_text(asp_model.graph)))
 
             logging.info(asp_model._reactions_list)
-
 
 
 if __name__ == "__main__":

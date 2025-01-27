@@ -1,10 +1,9 @@
-import sympy as sp
-import networkx as nx
 import logging
 
 import matplotlib.pyplot as plt
+import networkx as nx
 import seaborn as sns
-
+import sympy as sp
 from pyvis.network import Network
 
 
@@ -24,7 +23,7 @@ class auxin_signalling_pathway():
 
         self.strict = False
 
-        # Initialise parameter symbols
+        #  Initialise parameter symbols
         arf_symbols = [sp.sympify(f"ARF_{i + 1}") for i in range(nARFs)]
 
         for arf in arf_symbols:
@@ -45,7 +44,8 @@ class auxin_signalling_pathway():
         for promoter in promoter_symbols:
             self.add_state(promoter, category='promoter')
 
-        dimer_symbols = [sp.sympify(f"D__{s1}__{s2}") for s1 in arf_symbols + iaa_symbols for s2 in arf_symbols + iaa_symbols]
+        dimer_symbols = [sp.sympify(
+            f"D__{s1}__{s2}") for s1 in arf_symbols + iaa_symbols for s2 in arf_symbols + iaa_symbols]
 
         for dimer in dimer_symbols:
             self.add_state(dimer, category='dimer')
@@ -57,7 +57,8 @@ class auxin_signalling_pathway():
 
         self.aux_symbol = 'x'
 
-        self.all_state_vars = arf_symbols + iaa_symbols + promoter_symbols + dimer_symbols + rna_symbols
+        self.all_state_vars = arf_symbols + iaa_symbols + \
+            promoter_symbols + dimer_symbols + rna_symbols
 
         state_var_eqns = [sp.sympify('0') for _ in self.all_state_vars]
 
@@ -65,7 +66,8 @@ class auxin_signalling_pathway():
         arf_decay = sp.sympify('arf_d')
 
         for _, arf in enumerate(arf_symbols + iaa_symbols):
-            self.add_reaction([], [arf], fwd_rates=[arf_production], bwd_rates=[arf_decay])
+            self.add_reaction([], [arf], fwd_rates=[
+                              arf_production], bwd_rates=[arf_decay])
 
         for d in dimer_symbols:
             # TODO define parameter labels
@@ -76,10 +78,12 @@ class auxin_signalling_pathway():
             self.add_transition_rate(dissociation_rate)
 
             reactants = str(d).split('__')[1:]
-            self.add_reaction(reactants, [d], [association_rate], [dissociation_rate])
+            self.add_reaction(reactants, [d], [association_rate], [
+                              dissociation_rate])
 
         for iaa in iaa_symbols:
-            self.add_reaction([iaa], [self.empty_set_node], [sp.sympify('d_a')], enzyme=self.aux_symbol)
+            self.add_reaction([iaa], [self.empty_set_node], [
+                              sp.sympify('d_a')], enzyme=self.aux_symbol)
 
         for promoter in promoter_symbols:
             reactants = promoter.split('__')[1:]
@@ -87,7 +91,8 @@ class auxin_signalling_pathway():
             self.add_transition_rate(f"k__{promoter}")
             self.add_transition_rate(f"k__{promoter}")
 
-            self.add_reaction(reactants + [sp.sympify('G')], [promoter], [sp.sympify('g_k')], [sp.sympify('g_d')])
+            self.add_reaction(
+                reactants + [sp.sympify('G')], [promoter], [sp.sympify('g_k')], [sp.sympify('g_d')])
 
         # Assume constant decay rate for all mRNA
         rna_decay_rate = sp.sympify('d__R')
@@ -95,12 +100,15 @@ class auxin_signalling_pathway():
         self.add_transition_rate(rna_decay_rate)
         self.add_transition_rate(rna_production_rate)
         for rna_symbol in rna_symbols:
-            self.add_reaction([self.empty_set_node], [rna_symbol], [], [rna_decay_rate])
+            self.add_reaction([self.empty_set_node], [
+                              rna_symbol], [], [rna_decay_rate])
             iaa = rna_symbol.split('__')[1]
-            self.add_reaction([], [iaa], fwd_rates=[rna_production_rate], enzyme=[rna_production_rate])
+            self.add_reaction([], [iaa], fwd_rates=[
+                              rna_production_rate], enzyme=[rna_production_rate])
 
         for promoter in promoter_symbols:
-            self.add_reaction([], [rna_symbol], [sp.sympify('k')], [sp.sympify('d')], enzyme='promoter')
+            self.add_reaction([], [rna_symbol], [sp.sympify('k')], [
+                              sp.sympify('d')], enzyme='promoter')
         for iaa in iaa_symbols:
             production_rate = sp.sympify(f"k__{iaa}")
             decay_rate = sp.sympify(f"d__{iaa}")
@@ -108,9 +116,10 @@ class auxin_signalling_pathway():
             self.add_transition_rate(production_rate)
             self.add_transition_rate(decay_rate)
 
-            self.add_reaction([self.empty_set_node], [iaa], [production_rate], [decay_rate], enzyme=rna_symbol)
+            self.add_reaction([self.empty_set_node], [iaa], [
+                              production_rate], [decay_rate], enzyme=rna_symbol)
 
-        # TODO convert network to ODE
+        #  TODO convert network to ODE
         self.state_var_eqns = state_var_eqns
 
     def add_transition_rate(self, rate, strict=None, description=''):
@@ -139,18 +148,19 @@ class auxin_signalling_pathway():
     def add_reaction(self, reactants=[], products=[], fwd_rates=[],
                      bwd_rates=[], enzyme=None, add_states=True, strict=None):
 
-
         reactants = [str(r) for r in reactants]
         products = [str(p) for p in products]
         fwd_rates = [str(r) for r in reactants]
         bwd_rates = [str(p) for p in products]
 
-        self._reactions_list.append((reactants, products, fwd_rates, bwd_rates, enzyme))
+        self._reactions_list.append(
+            (reactants, products, fwd_rates, bwd_rates, enzyme))
 
         if strict is None:
             strict = self.strict
 
-        logging.debug(f"adding reaction from {reactants} to {products} with rates {fwd_rates} and {bwd_rates}")
+        logging.debug(
+            f"adding reaction from {reactants} to {products} with rates {fwd_rates} and {bwd_rates}")
 
         if reactants is None:
             reactants = []
@@ -187,10 +197,12 @@ class auxin_signalling_pathway():
 
         if len(reactants) == 0:
             for fwd_rate, product in zip(fwd_rates, products):
-                self.graph.add_edge(self.empty_set_node, product, weight=fwd_rate, enzyme=enzyme)
+                self.graph.add_edge(self.empty_set_node,
+                                    product, weight=fwd_rate, enzyme=enzyme)
 
             for bwd_rate, reactant in zip(bwd_rates, reactants):
-                self.graph.add_edge(reactant, self.empty_set_node, weight=bwd_rate, enzyme=None)
+                self.graph.add_edge(
+                    reactant, self.empty_set_node, weight=bwd_rate, enzyme=None)
 
         for fwd_rate, reactant in zip(fwd_rates, reactants):
             for product in products:
@@ -218,19 +230,22 @@ class auxin_signalling_pathway():
 
         graph = self.graph.copy()
 
-        categories = [None] + sorted([val for val in nx.get_node_attributes(graph, 'category').values() if val is not None])
+        categories = [None] + sorted([val for val in nx.get_node_attributes(
+            graph, 'category').values() if val is not None])
 
         n_categories = len(categories)
         palette = sns.color_palette("husl", n_categories)
 
         print(graph.nodes)
         if 'cmap' not in kwargs:
-            cmap = [categories.index(graph.nodes[node]['category']) for node in graph.nodes]
+            cmap = [categories.index(graph.nodes[node]['category'])
+                    for node in graph.nodes]
             cmap = [palette[index] for index in cmap]
             kwargs['node_color'] = cmap
 
         for node in graph.nodes:
-            graph.nodes[node]['fillcolor'] = palette[categories.index(graph[node]['category']) if 'category' in graph[node] else 0]
+            graph.nodes[node]['fillcolor'] = palette[categories.index(
+                graph[node]['category']) if 'category' in graph[node] else 0]
             graph.nodes[node]['category'] = str(graph.nodes[node]['category'])
 
         network = Network('500px', '500px')
