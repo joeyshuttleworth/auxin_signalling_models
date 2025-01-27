@@ -6,9 +6,6 @@ import unittest
 
 import matplotlib.pyplot as plt
 import networkx as nx
-import numpy as np
-import seaborn as sns
-import sympy as sp
 
 from auxin_signalling_pathway.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
@@ -47,7 +44,8 @@ class TestGeneratePathway(unittest.TestCase):
             asp_model.draw_graph()
             plt.savefig(os.path.join(self.output_dir, f"test_graph_{i}"))
 
-            with open(os.path.join(self.output_dir, f"test_graph_{i}.txt"), 'w') as fout:
+            with open(os.path.join(self.output_dir,
+                                   f"test_graph_{i}.txt"), 'w') as fout:
                 fout.write(str(nx.write_network_text(asp_model.graph)))
 
             logging.info(asp_model._reactions_list)
