@@ -48,7 +48,7 @@ class TestGeneratePathway(unittest.TestCase):
                                    f"test_graph_{i}.txt"), 'w') as fout:
                 fout.write(str(nx.write_network_text(asp_model.graph)))
 
-            logging.info(asp_model._reactions_list)
+            logging.info(asp_model._reactions_set)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,8 @@ import seaborn as sns
 import sympy as sp
 from pyvis.network import Network
 
+from .reaction import reaction
+
 
 class auxin_signalling_pathway():
     def __init__(self, nARFs=1, nIAAs=1):
@@ -15,7 +17,7 @@ class auxin_signalling_pathway():
 
         self.graph = nx.Graph()
 
-        self._reactions_list = []
+        self._reactions_set = set()
 
         self.empty_set_node = '__phi'
 
@@ -86,7 +88,7 @@ class auxin_signalling_pathway():
 
         for iaa in iaa_symbols:
             self.add_reaction([iaa], [self.empty_set_node], [
-                              sp.sympify('d_a')], enzyme=self.aux_symbol)
+                              sp.sympify('d_a')], enzymes=[self.aux_symbol])
 
         for promoter in promoter_symbols:
             reactants = promoter.split('__')[1:]
@@ -109,11 +111,11 @@ class auxin_signalling_pathway():
             iaa = rna_symbol.split('__')[1]
             self.add_reaction([], [iaa],
                               fwd_rates=[rna_production_rate],
-                              enzyme=[rna_production_rate])
+                              enzymes=[rna_production_rate])
 
         for promoter in promoter_symbols:
             self.add_reaction([], [rna_symbol], [sp.sympify('k')], [
-                              sp.sympify('d')], enzyme='promoter')
+                              sp.sympify('d')], enzymes=['promoter'])
         for iaa in iaa_symbols:
             production_rate = sp.sympify(f"k__{iaa}")
             decay_rate = sp.sympify(f"d__{iaa}")
@@ -124,7 +126,7 @@ class auxin_signalling_pathway():
             self.add_reaction([self.empty_set_node], [iaa],
                               [production_rate],
                               [decay_rate],
-                              enzyme=rna_symbol)
+                              enzymes=[rna_symbol])
 
         #  TODO convert network to ODE
         self.state_var_eqns = state_var_eqns
@@ -153,15 +155,18 @@ class auxin_signalling_pathway():
         self.graph.add_node(label, category=category)
 
     def add_reaction(self, reactants=[], products=[], fwd_rates=[],
-                     bwd_rates=[], enzyme=None, add_states=True, strict=None):
+                     bwd_rates=[], enzymes=[], add_states=True, strict=None):
 
-        reactants = [str(r) for r in reactants]
-        products = [str(p) for p in products]
-        fwd_rates = [str(r) for r in reactants]
-        bwd_rates = [str(p) for p in products]
+        reactants = tuple([str(r) for r in reactants])
+        products = tuple([str(p) for p in products])
+        fwd_rates = tuple([str(r) for r in reactants])
+        bwd_rates = tuple([str(p) for p in products])
+        print(enzymes)
+        enzymes = tuple(enzymes)
 
-        self._reactions_list.append(
-            (reactants, products, fwd_rates, bwd_rates, enzyme))
+        self._reactions_set.add(
+            reaction(reactants, products, fwd_rates, bwd_rates, enzymes)
+        )
 
         if strict is None:
             strict = self.strict
@@ -207,7 +212,7 @@ class auxin_signalling_pathway():
         if len(reactants) == 0:
             for fwd_rate, product in zip(fwd_rates, products):
                 self.graph.add_edge(self.empty_set_node,
-                                    product, weight=fwd_rate, enzyme=enzyme)
+                                    product, weight=fwd_rate, enzymes=enzymes)
 
             for bwd_rate, reactant in zip(bwd_rates, reactants):
                 self.graph.add_edge(
@@ -265,14 +270,3 @@ class auxin_signalling_pathway():
 
         nx.draw(graph, **kwargs)
 
-
-if __name__ == '__main__':
-
-    asp_model = auxin_signalling_pathway(2, 2)
-    print(nx.write_network_text(asp_model.graph))
-    print(asp_model.transition_rates)
-    print(asp_model._reactions_list)
-    print(len(asp_model.transition_rates))
-
-    asp_model.draw_graph()
-    plt.show()
