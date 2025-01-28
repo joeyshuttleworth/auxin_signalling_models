@@ -25,12 +25,12 @@ class auxin_signalling_pathway():
         self.strict = False
 
         #  Initialise parameter symbols
-        arf_symbols = [sp.sympify(f"ARF_{i + 1}") for i in range(nARFs)]
+        arf_symbols = [f"ARF_{i + 1}" for i in range(nARFs)]
 
         for arf in arf_symbols:
             self.add_state(arf, category='ARF')
 
-        iaa_symbols = [sp.sympify(f"iaa_{i + 1}") for i in range(nIAAs)]
+        iaa_symbols = [f"iaa_{i + 1}" for i in range(nIAAs)]
 
         for iaa in iaa_symbols:
             self.add_state(iaa, category='IAA')
@@ -38,16 +38,16 @@ class auxin_signalling_pathway():
         # Dictionary defining each transition rate
         self.transition_rates = {}
 
-        promoter_symbols = [f"G__{arf}__{arf1}"
-                            for arf in arf_symbols for arf1 in arf_symbols]\
-            + [f"G__{arf}" for arf in arf_symbols]\
-            + [f"G__{arf}__{iaa}" for arf in arf_symbols
-               for iaa in iaa_symbols]
+        promoter_symbols = ["G"] + [f"G__{arf}__{arf1}"
+                                    for arf in arf_symbols for arf1 in arf_symbols]\
+                                        + [f"G__{arf}" for arf in arf_symbols]\
+                                        + [f"G__{arf}__{iaa}" for arf in arf_symbols
+                                           for iaa in iaa_symbols]
 
         for promoter in promoter_symbols:
             self.add_state(promoter, category='promoter')
 
-        dimer_symbols = [sp.sympify(f"D__{s1}__{s2}")
+        dimer_symbols = [f"D__{s1}__{s2}"
                          for s1 in arf_symbols + iaa_symbols
                          for s2 in arf_symbols + iaa_symbols]
 
@@ -61,8 +61,8 @@ class auxin_signalling_pathway():
 
         self.aux_symbol = 'x'
 
-        self.all_state_vars = arf_symbols + iaa_symbols + \
-            promoter_symbols + dimer_symbols + rna_symbols
+        self.all_state_vars = sorted(arf_symbols + iaa_symbols +
+                                     promoter_symbols + dimer_symbols + rna_symbols)
 
         state_var_eqns = [sp.sympify('0') for _ in self.all_state_vars]
 
@@ -90,6 +90,10 @@ class auxin_signalling_pathway():
                               sp.sympify('d_a')], enzymes=[self.aux_symbol])
 
         for promoter in promoter_symbols:
+
+            if promoter == 'G':
+                continue
+
             reactants = promoter.split('__')[1:]
 
             self.add_transition_rate(f"k__{promoter}")
@@ -113,8 +117,14 @@ class auxin_signalling_pathway():
                               enzymes=[rna_production_rate])
 
         for promoter in promoter_symbols:
+            if promoter == 'G':
+                continue
+
+            rna_symbol = promoter.split('__')[1]
+
             self.add_reaction([], [rna_symbol], [sp.sympify('k')], [
                               sp.sympify('d')], enzymes=['promoter'])
+
         for iaa in iaa_symbols:
             production_rate = sp.sympify(f"k__{iaa}")
             decay_rate = sp.sympify(f"d__{iaa}")
