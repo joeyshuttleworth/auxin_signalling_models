@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass(eq=True, order=True, frozen=True)
 class Reaction:
     products: tuple[str, ...]
@@ -10,7 +11,7 @@ class Reaction:
     reaction_type: str = 'linear'
 
     def __str__(self):
-        return f"Reaction: products={self.products}, reactant={self.reactants}, "\
+        return f"Reaction: products={self.products},"\
+            f"reactant={self.reactants}, "\
             f", fwd_rates={self.fwd_rates}, bwd_rates={self.bwd_rates}, "\
             f"enzymes={self.enzymes}"
-
