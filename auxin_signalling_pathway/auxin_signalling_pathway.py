@@ -1,6 +1,5 @@
 import logging
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import seaborn as sns
 import sympy as sp
@@ -269,4 +268,3 @@ class auxin_signalling_pathway():
         network.show("graph.html", notebook=False)
 
         nx.draw(graph, **kwargs)
-

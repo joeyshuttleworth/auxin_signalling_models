@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass(eq=True, order=True, frozen=True)
 class reaction:
     products: tuple[str, ...]
