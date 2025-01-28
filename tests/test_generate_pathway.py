@@ -46,9 +46,11 @@ class TestGeneratePathway(unittest.TestCase):
 
             with open(os.path.join(self.output_dir,
                                    f"test_graph_{i}.txt"), 'w') as fout:
-                fout.write(str(nx.write_network_text(asp_model.graph)))
+                fout.write(repr(nx.write_network_text(asp_model.graph)))
+                fout.write(repr(asp_model.generate_ode_system()))
 
             logging.info(asp_model._reactions_set)
+            logging.info(asp_model.generate_ode_system())
 
 
 if __name__ == "__main__":
