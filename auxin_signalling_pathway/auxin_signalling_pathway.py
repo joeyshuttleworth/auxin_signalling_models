@@ -39,10 +39,11 @@ class auxin_signalling_pathway():
         self.transition_rates = {}
 
         promoter_symbols = ["G"] + [f"G__{arf}__{arf1}"
-                                    for arf in arf_symbols for arf1 in arf_symbols]\
-                                        + [f"G__{arf}" for arf in arf_symbols]\
-                                        + [f"G__{arf}__{iaa}" for arf in arf_symbols
-                                           for iaa in iaa_symbols]
+                                    for arf in arf_symbols
+                                    for arf1 in arf_symbols]\
+            + [f"G__{arf}" for arf in arf_symbols]\
+            + [f"G__{arf}__{iaa}" for arf in arf_symbols
+               for iaa in iaa_symbols]
 
         for promoter in promoter_symbols:
             self.add_state(promoter, category='promoter')
@@ -62,7 +63,8 @@ class auxin_signalling_pathway():
         self.aux_symbol = 'x'
 
         self.all_state_vars = sorted(arf_symbols + iaa_symbols +
-                                     promoter_symbols + dimer_symbols + rna_symbols)
+                                     promoter_symbols + dimer_symbols
+                                     + rna_symbols)
 
         state_var_eqns = [sp.sympify('0') for _ in self.all_state_vars]
 
