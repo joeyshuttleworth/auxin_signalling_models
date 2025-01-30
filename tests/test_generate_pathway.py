@@ -43,11 +43,21 @@ class TestGeneratePathway(unittest.TestCase):
             logging.info(nx.write_network_text(asp_model.graph))
             asp_model.draw_graph()
             plt.savefig(os.path.join(self.output_dir, f"test_graph_{i}"))
+            plt.clf()
 
             with open(os.path.join(self.output_dir,
                                    f"test_graph_{i}.txt"), 'w') as fout:
-                fout.write(repr(nx.write_network_text(asp_model.graph)))
-                fout.write(repr(asp_model.generate_ode_system()))
+
+                odes, free_variables, transition_rates, constraints = \
+                    asp_model.generate_ode_system()
+
+                rhs_func = asp_model.generate_rhs_func()
+                print(rhs_func)
+
+                fout.write(f"ODEs: {odes}\n")
+                fout.write(f"constraints: {constraints}\n")
+                fout.write(f"free variables: {free_variables}\n")
+                fout.write(f"transition rates: {transition_rates}\n")
 
             logging.info(asp_model._reactions_set)
             logging.info(asp_model.generate_ode_system())
