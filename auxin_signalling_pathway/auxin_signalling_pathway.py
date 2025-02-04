@@ -9,7 +9,7 @@ from numba import njit, cfunc
 
 import numba as nb
 
-from numbalsoda import lsoda_sig
+from numbalsoda import lsoda, lsoda_sig
 
 from .reaction import Reaction
 
@@ -138,6 +138,7 @@ class auxin_signalling_pathway():
                 reactants + [sp.sympify('G')], [promoter],
                 [promoter_binding_rate], [promoter_unbinding_rate])
 
+        for promoter in self.promoter_symbols:
             for rna_symbol in rna_symbols:
                 max_rate = f"kmax__{rna_symbol}__{promoter}"
                 half_rate_conc = f"Ka__{rna_symbol}__{promoter}"
@@ -162,6 +163,12 @@ class auxin_signalling_pathway():
                     [], [rna_symbol], [max_rate, half_rate_conc, n],
                     [], [promoter], reaction_type="tf-hill-act"
                 )
+
+        for promoter in self.promoter_symbols:
+            if promoter == 'G':
+                continue
+
+            reactants = sorted(promoter.split('__')[1:])
 
             if len(reactants) == 2:
                 # TODO use different transition rates
@@ -205,8 +212,14 @@ class auxin_signalling_pathway():
             self.add_reaction([iaa], [self.empty_set_node],
                              [production_rate])
 
-        #  TODO convert network to ODE
         self.state_var_eqns = state_var_eqns
+
+        self.rhs_func = self._generate_rhs_func(njitted=True)
+
+        self.cfunc_rhs = self._make_cfunc_rhs()
+
+    def get_rhs_func(self):
+        return self.rhs_func
 
     def add_transition_rate(self, rate, default_value=0.0,
                             description="", strict=True):
@@ -340,7 +353,8 @@ class auxin_signalling_pathway():
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products and reaction.bwd_rates:
-                reaction = reaction.reversed()
+                terms += auxin_signalling_pathway.\
+                    _get_reaction_terms(reaction.reversed(), variable)
             fwd_rate = sp.sympify(
                 reaction.fwd_rates[0]) if reaction.fwd_rates else 0
             bwd_rate = sp.sympify(
@@ -354,6 +368,7 @@ class auxin_signalling_pathway():
                     terms.append(sp.prod([sp.sympify(product)
                                           for product in reaction.products])
                                  * bwd_rate)
+
                 if reaction.enzymes and [t for t in terms if t != 0]:
                     terms = [t * sp.prod(list(reaction.enzymes)) for t in terms]
             return terms
@@ -388,8 +403,7 @@ class auxin_signalling_pathway():
 
         free_variables = [self.aux_symbol]
 
-        state_variables = sorted([n for n in self.graph.nodes()
-                                  if n != self.empty_set_node])
+        state_variables = list(self.get_default_initial_conditions().keys())
 
         odes = [sp.sympify('0') for _ in state_variables]
 
@@ -409,16 +423,33 @@ class auxin_signalling_pathway():
 
     def get_state_variables(self):
         return list([str(s) for s in self.graph.nodes()
-                     if s != self.empty_set_node])
+                     if s != self.empty_set_node
+                     and s != self.aux_symbol])
 
-    def make_cfunc_rhs(self):
+    def make_forward_solver(self):
+
+        cfunc_ptr = self.cfunc_rhs.address
+
+        def solver(ts, params, ic, aux):
+            data = np.full(len(params) + 1, np.nan)
+            data[0] = aux
+            data[1:] = params.copy()
+            return lsoda(cfunc_ptr, ic.copy(),
+                         np.array(ts),
+                         data=data.copy())
+
+        return solver
+
+    def get_cfunc_rhs(self):
+        return self.cfunc_rhs
+
+    def _make_cfunc_rhs(self):
 
         n_y = len(self.get_state_variables())
 
-        # Number of 'free variables' i.e. auxin
-        n_data = 1
-
-        rhs_func, _ = self.generate_rhs_func(njitted=True)
+        # Number of params + 'free variables' i.e. auxin
+        n_data = len(self.get_default_parameters()) + 1
+        rhs_func = self.get_rhs_func()
 
         @cfunc(lsoda_sig)
         def cfunc_rhs(t, y, dy, data):
@@ -426,14 +457,17 @@ class auxin_signalling_pathway():
             dy = nb.carray(dy, n_y)
             data = nb.carray(data, n_data)
 
-            params = data[1:].copy().flatten()
-            aux = .99
-            dy[:] = rhs_func(y, params, np.array([aux])).flatten()
+            params = data[1:].copy().flatten().astype(np.float64)
+            aux = data[0:1]
+            res = rhs_func(y, params,
+                           aux).astype(np.float64).flatten()
+            assert(res.shape == y.shape)
+            dy[:] = res[:]
             return
 
         return cfunc_rhs
 
-    def generate_rhs_func(self, njitted=False):
+    def _generate_rhs_func(self, njitted=False):
         odes, free_variables, transition_rates,\
             _ = self.generate_ode_system()
 
@@ -441,23 +475,25 @@ class auxin_signalling_pathway():
         odes = sp.Matrix([odes])
 
         transition_rates = self.transition_rates
-        param_names = sp.Matrix(list(transition_rates.keys())).T
+        ic_dict = self.get_default_initial_conditions()
 
-        params = np.array([transition_rates[var][0]
-                           for var in transition_rates]).astype(np.float64)
-
-        state_variables = sp.Matrix([s for s in self.get_state_variables()
-                                     if s not in free_variables
-                                     and s != self.empty_set_node]).T
+        state_variables = sp.Matrix([s for s in ic_dict])
+        param_names = sp.Matrix(list(transition_rates.keys()))
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
 
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)
+
+        params_dict = self.get_default_parameters()
+        params = np.array([p for p in params_dict.values()]).astype(np.float64)
+        ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
+        rhs_func(ic, params, np.array([.99]))
+
         if njitted:
             rhs_func = njit(rhs_func)
 
-        return rhs_func, params
+        return rhs_func
 
     def get_default_initial_conditions(self):
 
@@ -469,16 +505,22 @@ class auxin_signalling_pathway():
         for arf in self.arf_symbols:
             ic_dict[arf] = 1.0
 
+        ic_dict = {key: ic_dict[key] for key in sorted(ic_dict.keys())}
+
         return ic_dict
 
     def get_default_parameters(self):
-        param_dict = {v: .0 for v in self.transition_rates}
+        param_dict = {v: 1.0 for v in self.transition_rates}
 
+        orig_len = len(param_dict)
         for rna_symbol in self.rna_symbols:
             for promoter in self.promoter_symbols:
                 param_dict[f"n__{rna_symbol}__{promoter}"] = 1
                 param_dict[f"kmax__{rna_symbol}__{promoter}"] = 0.25
                 param_dict[f"Ka__{rna_symbol}__{promoter}"] = 0.5
+
+
+        assert len(param_dict) == orig_len
 
         return param_dict
 

@@ -62,8 +62,7 @@ class TestGeneratePathway(unittest.TestCase):
 
             with open(os.path.join(self.output_dir,
                                    f"test_graph_{i}.txt"), 'w') as fout:
-
-                rhs_func = asp_model.generate_rhs_func()
+                fout.write(repr(asp_model.generate_ode_system()))
 
             logging.info(asp_model._reactions_set)
             logging.info(asp_model.generate_ode_system())
@@ -78,32 +77,23 @@ class TestGeneratePathway(unittest.TestCase):
             fout.write(f"free variables: {free_variables}\n")
             fout.write(f"transition rates: {transition_rates}\n")
 
-        rhs_func, params = asp_model.generate_rhs_func(njitted=False)
+        ic_dict = asp_model.get_default_initial_conditions()
+        param_dict = asp_model.get_default_parameters()
 
-        ic = asp_model.get_default_initial_conditions()
-        ic = np.array([val for key, val in ic.items()
-                        if key != asp_model.empty_set_node]).astype(np.float64)
+        params = np.array([p for p in param_dict.values()]).astype(np.float64)
+        ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
 
-        params = np.array(params).astype(np.float64)
-        data = np.array([1.0] + list(params)).astype(np.float64) * 0.99
-        n_data = len(data)
+        solver = asp_model.make_forward_solver()
+        ts = np.linspace(0, 1000, 1000)
+        res, success = solver(ts, params, ic, 0.99)
 
-        logging.info("Derivative is ", rhs_func(ic, params,
-                                                np.array([.99])))
-
-        rhs_func = njit(rhs_func)
-        print('res', rhs_func(ic, params, np.array([.99])))
-
-        cfunc_rhs = asp_model.make_cfunc_rhs()
-
-        crhs_ptr = cfunc_rhs.address
-        ts = np.linspace(0, 1000, 100)
-        res = lsoda(crhs_ptr, ic, np.array(ts), data=data)
-        print(res)
+        return res, success
 
     def test_generate_solve_ode(self):
         for i, asp_model in enumerate(self.test_models):
-            self.generate_solve_ode(asp_model, i)
+            res, success = self.generate_solve_ode(asp_model, i)
+
+        self.assertTrue(success and np.all(np.isfinite(res)))
 
 
 if __name__ == "__main__":
