@@ -49,7 +49,9 @@ setup(
         'seaborn>=0.12',
         'networkx>=3.0',
         'pyvis>=0.3.0',
-        'sympy>=1.12'
+        'sympy>=1.12',
+        'numba',
+        'numbalsoda'
     ],
     extras_require={
         'test': [
