@@ -18,6 +18,8 @@ class Reaction:
             f"reaction_type={self.reaction_type}"
 
     def reversed(self):
-        return self.__class__(products=self.reactants, reactants=self.products,
-                              fwd_rates=self.bwd_rates, bwd_rates=self.fwd_rates,
-                              enzymes=self.enzymes, reaction_type=self.reaction_type)
+        return self.__class__(products=self.reactants,
+                              reactants=self.products,
+                              fwd_rates=self.bwd_rates,
+                              bwd_rates=self.fwd_rates, enzymes=self.enzymes,
+                              reaction_type=self.reaction_type)

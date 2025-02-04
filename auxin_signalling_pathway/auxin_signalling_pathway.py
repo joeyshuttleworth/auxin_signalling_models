@@ -1,15 +1,13 @@
 import logging
 
-import numpy as np
 import networkx as nx
+import numba as nb
+import numpy as np
 import seaborn as sns
 import sympy as sp
-from pyvis.network import Network
-from numba import njit, cfunc
-
-import numba as nb
-
+from numba import cfunc, njit
 from numbalsoda import lsoda, lsoda_sig
+from pyvis.network import Network
 
 from .reaction import Reaction
 
@@ -108,7 +106,7 @@ class auxin_signalling_pathway():
         for iaa in iaa_symbols:
             iaa_decay_rate = f"d__{iaa}"
             self.add_transition_rate(iaa_decay_rate, 0.1,
-                                     f"decay rate of iaa")
+                                     "decay rate of iaa")
             self.add_reaction([iaa], [self.empty_set_node],
                               [iaa_decay_rate],
                               enzymes=[self.aux_symbol])
@@ -127,7 +125,8 @@ class auxin_signalling_pathway():
                                      f"binding rate for promoter {promoter}")
             self.add_transition_rate(promoter_unbinding_rate,
                                      0.01,
-                                     f"dissociation rate for promoter {promoter}")
+                                     "dissociation rate for promoter"
+                                     f"{promoter}")
 
             if len(reactants) == 2:
                 reactants = [f"D__{reactants[0]}__{reactants[1]}"]
@@ -147,13 +146,15 @@ class auxin_signalling_pathway():
                 self.add_transition_rate(max_rate,
                                          1.0,
                                          f"Max rate of transcription"
-                                         f"for {rna_symbol} for promoter {promoter}"
+                                         f"for {rna_symbol} for promoter "
+                                         f"{promoter}"
                                          )
 
                 self.add_transition_rate(half_rate_conc,
                                          0.5,
-                                         f"Half rate concentration for "
-                                         f"{rna_symbol} and promoter {promoter}"
+                                         f"Half rate concentration for"
+                                         f" {rna_symbol} and promoter"
+                                         f" {promoter}"
                                          )
                 self.add_transition_rate(n, 4,
                                          f"Hill coefficient for {rna_symbol}"
@@ -187,18 +188,18 @@ class auxin_signalling_pathway():
         rna_production_rate = sp.sympify('k__R')
         self.add_transition_rate(rna_decay_rate,
                                  1.0/240,
-                                 f"RNA decay rate")
+                                 "RNA decay rate")
         self.add_transition_rate(rna_production_rate,
                                  0.01,
-                                 f"base RNA production rate")
+                                 "base RNA production rate")
 
         for rna_symbol in rna_symbols:
             self.add_reaction([self.empty_set_node], [
                 rna_symbol], [], [rna_decay_rate])
             iaa = rna_symbol.split('__')[1]
             self.add_reaction([], [iaa],
-                             fwd_rates=[rna_production_rate],
-                             enzymes=[rna_symbol])
+                              fwd_rates=[rna_production_rate],
+                              enzymes=[rna_symbol])
 
         for iaa in iaa_symbols:
             production_rate = sp.sympify(f"k__{iaa}")
@@ -207,10 +208,10 @@ class auxin_signalling_pathway():
                                      f"Production rate for {iaa}")
 
             self.add_reaction([self.empty_set_node], [iaa],
-                             [production_rate],
+                              [production_rate],
                               enzymes=rna_symbols)
             self.add_reaction([iaa], [self.empty_set_node],
-                             [production_rate])
+                              [production_rate])
 
         self.state_var_eqns = state_var_eqns
 
@@ -338,6 +339,7 @@ class auxin_signalling_pathway():
                         color='grey',
                         category='enzymatic'
                     )
+
     @staticmethod
     def _get_reaction_terms(reaction, variable):
         terms = [sp.sympify('0')]
@@ -370,7 +372,8 @@ class auxin_signalling_pathway():
                                  * bwd_rate)
 
                 if reaction.enzymes and [t for t in terms if t != 0]:
-                    terms = [t * sp.prod(list(reaction.enzymes)) for t in terms]
+                    terms = [t * sp.prod(list(reaction.enzymes))
+                             for t in terms]
             return terms
 
         elif reaction.reaction_type == "tf-hill-act":
@@ -461,17 +464,17 @@ class auxin_signalling_pathway():
             aux = data[0:1]
             res = rhs_func(y, params,
                            aux).astype(np.float64).flatten()
-            assert(res.shape == y.shape)
+            assert (res.shape == y.shape)
             dy[:] = res[:]
             return
 
         return cfunc_rhs
 
     def _generate_rhs_func(self, njitted=False):
-        odes, free_variables, transition_rates,\
+        odes, free_variables, transition_rates, \
             _ = self.generate_ode_system()
 
-        # Create column vector of ode expressions
+        #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
         transition_rates = self.transition_rates
@@ -519,7 +522,6 @@ class auxin_signalling_pathway():
                 param_dict[f"kmax__{rna_symbol}__{promoter}"] = 0.25
                 param_dict[f"Ka__{rna_symbol}__{promoter}"] = 0.5
 
-
         assert len(param_dict) == orig_len
 
         return param_dict
@@ -560,7 +562,7 @@ class auxin_signalling_pathway():
                 e_palette = ['black', 'grey']
 
             e_cmap = []
-            # Colour edges
+            #  Colour edges
             for _, _, d in graph.edges(data=True):
                 cat = d['category'] if 'category' in d else 'None'
                 d['category'] = cat
@@ -573,4 +575,3 @@ class auxin_signalling_pathway():
         network = Network('500px', '500px')
         network.from_nx(graph)
         network.show("graph.html", notebook=False)
-

@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
 
-import logging
-import os
-import unittest
-
-import matplotlib.pyplot as plt
-import networkx as nx
-
-from numbalsoda import lsoda, lsoda_sig
-import numpy as np
-import numba as nb
 import argparse
-import sympy as sp
+import os
 import timeit
 
-from numba import cfunc, njit
+import matplotlib.pyplot as plt
+import numpy as np
 
 from auxin_signalling_pathway.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
@@ -42,7 +33,6 @@ def main():
     global output_dir
     output_dir = setup_output_directory(args.output, "benchmark")
 
-
     kwargs_list = [
         {'nARFs': 1, 'nIAAs': 1},
         {'nARFs': 2, 'nIAAs': 1},
@@ -62,7 +52,7 @@ def main():
         solver = asp_model.make_forward_solver()
 
         params = np.array([param_dict[key] for key in param_dict])\
-                .astype(np.float64)
+            .astype(np.float64)
 
         params = np.array([p for p in param_dict.values()]).astype(np.float64)
         ic = np.array([x for x in ic_dict.values()]).astype(np.float64)

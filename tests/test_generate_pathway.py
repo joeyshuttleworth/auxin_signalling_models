@@ -6,11 +6,7 @@ import unittest
 
 import matplotlib.pyplot as plt
 import networkx as nx
-
-from numbalsoda import lsoda, lsoda_sig
 import numpy as np
-import numba as nb
-from numba import cfunc, njit
 
 from auxin_signalling_pathway.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
@@ -42,8 +38,8 @@ class TestGeneratePathway(unittest.TestCase):
             {'nARFs': 4, 'nIAAs': 4}
         ]
 
-        self.test_models =  [asp_class(**kwargs) for
-                             kwargs in kwargs_list]
+        self.test_models = [asp_class(**kwargs) for
+                            kwargs in kwargs_list]
 
     def test_graph_generation(self):
         kwargs_list = [
@@ -71,7 +67,7 @@ class TestGeneratePathway(unittest.TestCase):
         odes, free_variables, transition_rates, constraints = \
             asp_model.generate_ode_system()
         with open(os.path.join(self.output_dir,
-                                f"test_graph_{i}.txt"), 'w') as fout:
+                               f"test_graph_{i}.txt"), 'w') as fout:
             fout.write(f"ODEs: {odes}\n")
             fout.write(f"constraints: {constraints}\n")
             fout.write(f"free variables: {free_variables}\n")
