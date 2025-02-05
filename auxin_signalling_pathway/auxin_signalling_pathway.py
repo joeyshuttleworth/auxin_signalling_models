@@ -26,7 +26,7 @@ class auxin_signalling_pathway():
 
         self.add_state(self.empty_set_node, category='None')
 
-        self.strict = False
+        self.strict = True
 
         #  Initialise parameter symbols
         arf_symbols = [f"ARF_{i + 1}" for i in range(nARFs)]
@@ -139,30 +139,18 @@ class auxin_signalling_pathway():
 
         for promoter in self.promoter_symbols:
             for rna_symbol in rna_symbols:
-                max_rate = f"kmax__{rna_symbol}__{promoter}"
-                half_rate_conc = f"Ka__{rna_symbol}__{promoter}"
-                n = f"n__{rna_symbol}__{promoter}"
+                rate = f"k__{promoter}__{rna_symbol}"
 
-                self.add_transition_rate(max_rate,
+                self.add_transition_rate(rate,
                                          1.0,
-                                         f"Max rate of transcription"
+                                         f"Rate of transcription"
                                          f"for {rna_symbol} for promoter "
                                          f"{promoter}"
                                          )
 
-                self.add_transition_rate(half_rate_conc,
-                                         0.5,
-                                         f"Half rate concentration for"
-                                         f" {rna_symbol} and promoter"
-                                         f" {promoter}"
-                                         )
-                self.add_transition_rate(n, 4,
-                                         f"Hill coefficient for {rna_symbol}"
-                                         f" and {promoter}")
-
                 self.add_reaction(
-                    [], [rna_symbol], [max_rate, half_rate_conc, n],
-                    [], [promoter], reaction_type="tf-hill-act"
+                    [], [rna_symbol], [rate],
+                    [], [promoter], reaction_type="linear"
                 )
 
         for promoter in self.promoter_symbols:
@@ -174,14 +162,17 @@ class auxin_signalling_pathway():
             if len(reactants) == 2:
                 # TODO use different transition rates
                 partially_bound_promoter = f"G__{reactants[0]}"
-                self.add_reaction(
-                    [reactants[1]] + [partially_bound_promoter], [promoter],
-                    [promoter_binding_rate], [promoter_unbinding_rate])
+
+                if partially_bound_promoter in self.promoter_symbols:
+                    self.add_reaction(
+                        [reactants[1]] + [partially_bound_promoter], [promoter],
+                        [promoter_binding_rate], [promoter_unbinding_rate])
 
                 partially_bound_promoter = f"G__{reactants[1]}"
-                self.add_reaction(
-                    [reactants[0]] + [partially_bound_promoter], [promoter],
-                    [promoter_binding_rate], [promoter_unbinding_rate])
+                if partially_bound_promoter in self.promoter_symbols:
+                    self.add_reaction(
+                        [reactants[0]] + [partially_bound_promoter], [promoter],
+                        [promoter_binding_rate], [promoter_unbinding_rate])
 
         # Assume constant decay rate for all mRNA
         rna_decay_rate = sp.sympify('d__R')
