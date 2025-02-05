@@ -421,6 +421,13 @@ class auxin_signalling_pathway():
         return self._reactions_set
 
     def generate_ode_system(self):
+        """Generate a list of sympy expressions comprising an ODE system
+
+        :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
+        the auxin concentration, a dictionary of parameters, and a list of
+        constraints (sympy Expressions)
+
+        """
 
         free_variables = [self.aux_symbol]
 
@@ -443,11 +450,24 @@ class auxin_signalling_pathway():
         return odes, free_variables, self.transition_rates, constraints
 
     def get_state_variables(self):
-        return list([str(s) for s in self.graph.nodes()
-                     if s != self.empty_set_node
-                     and s != self.aux_symbol])
+        """ Construct a list of the model's state variables
+
+        :returns: a list of the model's state variables, sorted in
+        alphabetical order, and excluding the empty-set node, and the auxin
+        concentration
+
+        """
+        return sorted(list([str(s) for s in self.graph.nodes()
+                            if s != self.empty_set_node
+                            and s != self.aux_symbol]))
 
     def make_forward_solver(self):
+        """Generate a function which simulates the model
+
+        :returns: a function returning model output under different times,
+        parameter values, initial conditions and auxin concentrations
+
+        """
 
         cfunc_ptr = self.cfunc_rhs.address
 
@@ -465,6 +485,12 @@ class auxin_signalling_pathway():
         return self.cfunc_rhs
 
     def _make_cfunc_rhs(self):
+        """Generate a c function which evaluates the RHS of the ODE system
+
+        :returns: a c function with signature lsoda_sig for use solving our ODE
+        system
+
+        """
 
         n_y = len(self.get_state_variables())
 
@@ -517,6 +543,13 @@ class auxin_signalling_pathway():
         return rhs_func
 
     def get_default_initial_conditions(self):
+        """List the initial conditions of the system
+
+
+        :returns: a dictionary with a key for each state variable corresponding
+        to various default initial conidtions
+
+        """
 
         state_vars = self.get_state_variables()
         ic_dict = {str(s): .0 for s in state_vars if s != self.empty_set_node
@@ -531,6 +564,11 @@ class auxin_signalling_pathway():
         return ic_dict
 
     def get_default_parameters(self):
+        """ Return a default parameter set
+
+        :return: a dictionary of parameter values
+        """
+
         param_dict = {v: 1.0 for v in self.transition_rates}
 
         orig_len = len(param_dict)
@@ -539,6 +577,10 @@ class auxin_signalling_pathway():
         return param_dict
 
     def draw_graph(self, **kwargs):
+        """ Output a graph of the model using networkx
+        """
+
+
         if 'pos' not in kwargs:
             kwargs['pos'] = nx.circular_layout(self.graph)
 
