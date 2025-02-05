@@ -69,8 +69,8 @@ class auxin_signalling_pathway():
         self.aux_symbol = 'x'
         self.add_state(self.aux_symbol, category='None')
 
-        self.all_state_vars = sorted(arf_symbols + iaa_symbols +
-                                     self.promoter_symbols + dimer_symbols
+        self.all_state_vars = sorted(arf_symbols + iaa_symbols
+                                     + self.promoter_symbols + dimer_symbols
                                      + rna_symbols)
 
         state_var_eqns = [sp.sympify('0') for _ in self.all_state_vars]
@@ -178,7 +178,7 @@ class auxin_signalling_pathway():
         rna_decay_rate = sp.sympify('d__R')
         rna_production_rate = sp.sympify('k__R')
         self.add_transition_rate(rna_decay_rate,
-                                 1.0/240,
+                                 1.0 / 240,
                                  "RNA decay rate")
         self.add_transition_rate(rna_production_rate,
                                  0.01,
@@ -240,7 +240,6 @@ class auxin_signalling_pathway():
     def add_reaction(self, reactants=[], products=[], fwd_rates=[],
                      bwd_rates=[], enzymes=[], add_states=False, strict=None,
                      reaction_type='linear'):
-
         """Add a chemical reaction to the model.
 
         :param reactants: the reactants of the reaction
@@ -260,7 +259,6 @@ class auxin_signalling_pathway():
         @return None
 
         """
-
 
         reactants = tuple([str(r) for r in reactants])
         products = tuple([str(p) for p in products])
@@ -579,7 +577,6 @@ class auxin_signalling_pathway():
     def draw_graph(self, **kwargs):
         """ Output a graph of the model using networkx
         """
-
 
         if 'pos' not in kwargs:
             kwargs['pos'] = nx.circular_layout(self.graph)

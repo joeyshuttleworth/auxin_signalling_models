@@ -15,7 +15,6 @@ class Reaction:
 
     """
 
-
     reactants: tuple[str, ...]
     products: tuple[str, ...]
     fwd_rates: tuple[str, ...]
