@@ -238,8 +238,29 @@ class auxin_signalling_pathway():
         self.graph.add_node(label, category=category)
 
     def add_reaction(self, reactants=[], products=[], fwd_rates=[],
-                     bwd_rates=[], enzymes=[], add_states=False, strict=True,
+                     bwd_rates=[], enzymes=[], add_states=False, strict=None,
                      reaction_type='linear'):
+
+        """Add a chemical reaction to the model.
+
+        :param reactants: the reactants of the reaction
+        :param products: the products of the reaction (cannot be empty or None)
+        :param fwd_rates: parameters associated with the forwards reaction
+        (reactants -> products)
+        :param bwd_rates: parameters associated with the reverse
+        reaction (products->reactants)
+        :param enzymes: other state variables that contribute
+        to the reaction
+        but aren't consumed
+        :param add_states: boolean flag, if true missing
+        states are added to the model
+        :param strict: Boolean flag, if true, an exception is thrown
+        if any of the state variables are missing from the model
+
+        @return None
+
+        """
+
 
         reactants = tuple([str(r) for r in reactants])
         products = tuple([str(p) for p in products])
@@ -276,9 +297,15 @@ class auxin_signalling_pathway():
             raise Exception("")
 
         if add_states:
-            for state in set(reactants + products):
+            for state in set(reactants + products + enzymes):
                 if state not in self.graph.nodes:
                     self.add_state(state)
+        elif strict:
+            for state in set(reactants + products + enzymes):
+                if state not in self.graph.nodes:
+                    raise Exception(f"Tried to add reaction with state {state}"
+                                    f"but {state} does not exist in the model"
+                                    "(strict=True)")
 
         for rate in bwd_rates + fwd_rates:
             if rate not in self.transition_rates:
@@ -507,12 +534,6 @@ class auxin_signalling_pathway():
         param_dict = {v: 1.0 for v in self.transition_rates}
 
         orig_len = len(param_dict)
-        for rna_symbol in self.rna_symbols:
-            for promoter in self.promoter_symbols:
-                param_dict[f"n__{rna_symbol}__{promoter}"] = 1
-                param_dict[f"kmax__{rna_symbol}__{promoter}"] = 0.25
-                param_dict[f"Ka__{rna_symbol}__{promoter}"] = 0.5
-
         assert len(param_dict) == orig_len
 
         return param_dict
