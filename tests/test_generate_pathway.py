@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import logging
 import os
 import unittest
@@ -76,12 +74,9 @@ class TestGeneratePathway(unittest.TestCase):
         ic_dict = asp_model.get_default_initial_conditions()
         param_dict = asp_model.get_default_parameters()
 
-        params = np.array([p for p in param_dict.values()]).astype(np.float64)
-        ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
-
         solver = asp_model.make_forward_solver()
         ts = np.linspace(0, 1000, 1000)
-        res, success = solver(ts, params, ic, 0.99)
+        res, success = solver(ts, param_dict, ic_dict, 0.99)
 
         return res, success
 
