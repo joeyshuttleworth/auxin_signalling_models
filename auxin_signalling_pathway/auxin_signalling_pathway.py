@@ -79,13 +79,25 @@ class auxin_signalling_pathway():
         arf_decay = sp.sympify('arf__d')
 
         self.add_transition_rate(arf_production, 1.0,
-                                 "Production rate of ARFs")
+                                 "production rate of ARFs")
         self.add_transition_rate(arf_decay, 1.0,
-                                 "Decay rate of ARFs")
+                                 "decay rate of ARFs")
 
-        for _, arf in enumerate(arf_symbols + iaa_symbols):
+
+        iaa_production = sp.sympify('iaa__k')
+        iaa_decay = sp.sympify('iaa__d')
+        self.add_transition_rate(iaa_production, 1.0,
+                                 "production rate of Aux/IAAs")
+        self.add_transition_rate(iaa_decay, 1.0,
+                                 "decay rate of Aux/IAAs")
+
+        for _, arf in enumerate(arf_symbols):
             self.add_reaction([], [arf], fwd_rates=[
                 arf_production], bwd_rates=[arf_decay])
+
+        for _, arf in enumerate(iaa_symbols):
+            self.add_reaction([], [arf], fwd_rates=[
+                iaa_production], bwd_rates=[iaa_decay])
 
         for d in dimer_symbols:
             # TODO define parameter labels
@@ -104,9 +116,9 @@ class auxin_signalling_pathway():
                 dissociation_rate])
 
         for iaa in iaa_symbols:
-            iaa_decay_rate = f"d__{iaa}"
+            iaa_decay_rate = f"d__{iaa}_{self.aux_symbol}"
             self.add_transition_rate(iaa_decay_rate, 0.1,
-                                     "decay rate of iaa")
+                                     "rate of auxin-mediated decay of Aux/IAA")
             self.add_reaction([iaa], [self.empty_set_node],
                               [iaa_decay_rate],
                               enzymes=[self.aux_symbol])
@@ -164,15 +176,27 @@ class auxin_signalling_pathway():
                 partially_bound_promoter = f"G__{reactants[0]}"
 
                 if partially_bound_promoter in self.promoter_symbols:
-                    self.add_reaction(
-                        [reactants[1]] + [partially_bound_promoter], [promoter],
-                        [promoter_binding_rate], [promoter_unbinding_rate])
+                    promoter_binding_rate = f"k__{partially_bound_promoter}__bind__{reactants[1]}"
+                    promoter_unbinding_rate = f"d__{promoter}__unbind__{reactants[1]}"
+
+                    if promoter_binding_rate not in self.transition_rates:
+                        self.add_transition_rate(promoter_binding_rate)
+                        self.add_transition_rate(promoter_unbinding_rate)
+                        self.add_reaction(
+                            [reactants[1]] + [partially_bound_promoter], [promoter],
+                            [promoter_binding_rate], [promoter_unbinding_rate])
 
                 partially_bound_promoter = f"G__{reactants[1]}"
                 if partially_bound_promoter in self.promoter_symbols:
-                    self.add_reaction(
-                        [reactants[0]] + [partially_bound_promoter], [promoter],
-                        [promoter_binding_rate], [promoter_unbinding_rate])
+                    promoter_binding_rate = f"k__{partially_bound_promoter}__bind__{reactants[0]}"
+                    promoter_unbinding_rate = f"d__{promoter}__unbind__{reactants[0]}"
+
+                    if promoter_binding_rate not in self.transition_rates:
+                        self.add_transition_rate(promoter_binding_rate)
+                        self.add_transition_rate(promoter_unbinding_rate)
+                        self.add_reaction(
+                            [reactants[0]] + [partially_bound_promoter], [promoter],
+                            [promoter_binding_rate], [promoter_unbinding_rate])
 
         # Assume constant decay rate for all mRNA
         rna_decay_rate = sp.sympify('d__R')
@@ -188,6 +212,10 @@ class auxin_signalling_pathway():
             self.add_reaction([self.empty_set_node], [
                 rna_symbol], [], [rna_decay_rate])
             iaa = rna_symbol.split('__')[1]
+
+            iaa_production_rate = f"k__{rna_symbol}__{iaa}"
+            self.add_transition_rate(iaa_production_rate)
+
             self.add_reaction([], [iaa],
                               fwd_rates=[rna_production_rate],
                               enzymes=[rna_symbol])
@@ -201,8 +229,6 @@ class auxin_signalling_pathway():
             self.add_reaction([self.empty_set_node], [iaa],
                               [production_rate],
                               enzymes=rna_symbols)
-            self.add_reaction([iaa], [self.empty_set_node],
-                              [production_rate])
 
         self.state_var_eqns = state_var_eqns
 
@@ -370,7 +396,7 @@ class auxin_signalling_pathway():
             raise Exception("")
 
         if reaction.reaction_type == 'linear':
-            if variable in reaction.products and reaction.bwd_rates:
+            if variable in reaction.products:
                 terms += auxin_signalling_pathway.\
                     _get_reaction_terms(reaction.reversed(), variable)
             fwd_rate = sp.sympify(
@@ -378,18 +404,24 @@ class auxin_signalling_pathway():
             bwd_rate = sp.sympify(
                 reaction.bwd_rates[0]) if reaction.bwd_rates else 0
 
-            if variable in reaction.reactants and reaction.fwd_rates:
-                if not reaction.enzymes:
-                    terms.append(-sp.prod([sp.sympify(reactant)
-                                           for reactant in reaction.reactants])
-                                 * fwd_rate)
-                    terms.append(sp.prod([sp.sympify(product)
-                                          for product in reaction.products])
-                                 * bwd_rate)
+            if variable in reaction.reactants:
+                terms.append(-sp.prod([sp.sympify(reactant)
+                                        for reactant in reaction.reactants])
+                                * fwd_rate)
+                terms.append(sp.prod([sp.sympify(product)
+                                        for product in reaction.products])
+                                * bwd_rate)
 
                 if reaction.enzymes and [t for t in terms if t != 0]:
-                    terms = [t * sp.prod(list(reaction.enzymes))
+                    terms = [t * sp.prod([sp.sympify(x)
+                                          for x in reaction.enzymes])
                              for t in terms]
+                elif reaction.enzymes:
+                    terms = [-sp.prod([sp.sympify(x) for x in reaction.enzymes]) \
+                             * fwd_rate,
+                             sp.prod([sp.sympify(x) for x in reaction.enzymes])\
+                             * bwd_rate]
+
             return terms
 
         elif reaction.reaction_type == "tf-hill-act":
@@ -442,6 +474,10 @@ class auxin_signalling_pathway():
                 odes[var_index] += sp.Add(*
                                           self._get_reaction_terms(reaction,
                                                                    variable))
+
+        sub_dict = {sp.sympify(self.empty_set_node): 1.0}
+        odes = [ode.subs(sub_dict) for ode in odes]
+
         # TODO include the fact that the promoter variables sum to 1
         constraints = []
 
@@ -469,7 +505,20 @@ class auxin_signalling_pathway():
 
         cfunc_ptr = self.cfunc_rhs.address
 
-        def solver(ts, params, ic, aux):
+        default_params_dict = self.get_default_parameters()
+        default_ic_dict = self.get_default_initial_conditions()
+
+        def solver(ts, params_dict, ic_dict, aux):
+
+            params = np.array([
+                params_dict[key] for key in default_params_dict
+                       ])
+
+            ic = np.array([
+                ic_dict[key] for key in default_ic_dict
+            ])
+            ts = np.array(ts)
+
             data = np.full(len(params) + 1, np.nan)
             data[0] = aux
             data[1:] = params.copy()
@@ -523,14 +572,14 @@ class auxin_signalling_pathway():
         ic_dict = self.get_default_initial_conditions()
 
         state_variables = sp.Matrix([s for s in ic_dict])
-        param_names = sp.Matrix(list(transition_rates.keys()))
+        params_dict = self.get_default_parameters()
+        param_names = sp.Matrix(list(params_dict.keys()))
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
 
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)
 
-        params_dict = self.get_default_parameters()
         params = np.array([p for p in params_dict.values()]).astype(np.float64)
         ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
         rhs_func(ic, params, np.array([.99]))
@@ -567,7 +616,7 @@ class auxin_signalling_pathway():
         :return: a dictionary of parameter values
         """
 
-        param_dict = {v: 1.0 for v in self.transition_rates}
+        param_dict = {v[0]: 1.0 for k, v in self.transition_rates}
 
         orig_len = len(param_dict)
         assert len(param_dict) == orig_len
