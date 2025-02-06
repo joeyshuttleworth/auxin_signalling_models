@@ -83,7 +83,6 @@ class auxin_signalling_pathway():
         self.add_transition_rate(arf_decay, 1.0,
                                  "decay rate of ARFs")
 
-
         iaa_production = sp.sympify('iaa__k')
         iaa_decay = sp.sympify('iaa__d')
         self.add_transition_rate(iaa_production, 1.0,
@@ -406,20 +405,20 @@ class auxin_signalling_pathway():
 
             if variable in reaction.reactants:
                 terms.append(-sp.prod([sp.sympify(reactant)
-                                        for reactant in reaction.reactants])
-                                * fwd_rate)
+                                       for reactant in reaction.reactants])
+                             * fwd_rate)
                 terms.append(sp.prod([sp.sympify(product)
-                                        for product in reaction.products])
-                                * bwd_rate)
+                                      for product in reaction.products])
+                             * bwd_rate)
 
                 if reaction.enzymes and [t for t in terms if t != 0]:
                     terms = [t * sp.prod([sp.sympify(x)
                                           for x in reaction.enzymes])
                              for t in terms]
                 elif reaction.enzymes:
-                    terms = [-sp.prod([sp.sympify(x) for x in reaction.enzymes]) \
+                    terms = [-sp.prod([sp.sympify(x) for x in reaction.enzymes])
                              * fwd_rate,
-                             sp.prod([sp.sympify(x) for x in reaction.enzymes])\
+                             sp.prod([sp.sympify(x) for x in reaction.enzymes])
                              * bwd_rate]
 
             return terms
@@ -512,7 +511,7 @@ class auxin_signalling_pathway():
 
             params = np.array([
                 params_dict[key] for key in default_params_dict
-                       ])
+            ])
 
             ic = np.array([
                 ic_dict[key] for key in default_ic_dict
@@ -568,7 +567,6 @@ class auxin_signalling_pathway():
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
-        transition_rates = self.transition_rates
         ic_dict = self.get_default_initial_conditions()
 
         state_variables = sp.Matrix([s for s in ic_dict])
