@@ -617,7 +617,7 @@ class auxin_signalling_pathway():
         print(self.transition_rates)
         param_dict = {k: v[0] for k, v in self.transition_rates.items()}
 
-        # sort parameters
+        # sort parameters
         param_dict = {key: param_dict[key] for key in sorted(list(param_dict))}
 
         return param_dict
