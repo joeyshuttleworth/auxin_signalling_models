@@ -518,14 +518,23 @@ class auxin_signalling_pathway():
         default_params_dict = self.get_default_parameters()
         default_ic_dict = self.get_default_initial_conditions()
 
-        def solver(ts, params_dict, ic_dict, aux):
+        def solver(ts, params_dict, ic_dict, aux, strict=True):
+
+            if strict:
+                if keys:=[k for k in default_params_dict if k not in params_dict]:
+                    raise Exception(f"Parameter dictionary didnt contain keys: {keys}")
+                if keys:=[k for k in default_ic_dict if k not  in ic_dict]:
+                    raise Exception(f"IC dictionary didnt contain keys: {keys}")
 
             params = np.array([
-                params_dict[key] for key in default_params_dict
+                params_dict[key] if key in params_dict
+                else default_params_dict[key]
+                for key in default_params_dict
             ])
 
             ic = np.array([
-                ic_dict[key] for key in default_ic_dict
+                ic_dict[key] if key in ic_dict else default_ic_dict[key]
+                for key in default_ic_dict
             ])
             ts = np.array(ts)
 
