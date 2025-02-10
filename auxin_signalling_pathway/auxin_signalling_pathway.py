@@ -383,6 +383,17 @@ class auxin_signalling_pathway():
 
     @staticmethod
     def _get_reaction_terms(reaction, variable):
+        """Get a term for the ODE formulation of a model from a particular reaction
+
+        This function is used to generate an ODE system describing the
+        time-evoluation of the model
+
+        :param reaction: a Reaction describing the reaction of interest
+        :param variable: the state variable for which terms are being generated
+
+        :returns: a list of sympy expressions resulting from the reaction
+
+        """
         terms = [sp.sympify('0')]
 
         if variable in reaction.enzymes:
@@ -622,8 +633,10 @@ class auxin_signalling_pathway():
 
         return param_dict
 
-    def draw_graph(self, **kwargs):
-        """ Output a graph of the model using networkx
+    def draw_graph(self, output_path=None, **kwargs):
+        """ Output a graph of the model using networkx and pygraphvis
+
+        :param output_path: an optional path for outputting the diagram
         """
 
         if 'pos' not in kwargs:
@@ -672,5 +685,7 @@ class auxin_signalling_pathway():
         nx.draw(graph, **kwargs)
 
         network = Network('500px', '500px')
-        network.from_nx(graph)
-        network.show("graph.html", notebook=False)
+
+        if output_path:
+            network.from_nx(graph)
+            network.show(output_path, notebook=False)
