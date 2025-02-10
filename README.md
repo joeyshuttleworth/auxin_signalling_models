@@ -15,9 +15,6 @@ simulations nad statistical analysis.
 
 ### Dependencies
 
-* Describe any prerequisites, libraries, OS version, etc., needed before installing program.
-* ex. Windows 10
-
 The following installation instructions assume an environment with Python (version >= 3.10) and pip installed. The code has been tested under a Linux (Ubuntu) environment.
 
 ### Installing
