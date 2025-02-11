@@ -526,6 +526,13 @@ class auxin_signalling_pathway():
                 if keys:=[k for k in default_ic_dict if k not  in ic_dict]:
                     raise Exception(f"IC dictionary didnt contain keys: {keys}")
 
+            for k in params_dict:
+                if k not in default_params_dict:
+                    raise ValueError(f"specified rate {k} not found in model")
+            for k in ic_dict:
+                if k not in default_ic_dict:
+                    raise ValueError(f"specified state {k} not found in model")
+
             params = np.array([
                 params_dict[key] if key in params_dict
                 else default_params_dict[key]
