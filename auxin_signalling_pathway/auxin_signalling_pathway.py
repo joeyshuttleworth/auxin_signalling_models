@@ -521,10 +521,12 @@ class auxin_signalling_pathway():
         def solver(ts, params_dict, ic_dict, aux, strict=True):
 
             if strict:
-                if keys:=[k for k in default_params_dict if k not in params_dict]:
-                    raise Exception(f"Parameter dictionary didnt contain keys: {keys}")
-                if keys:=[k for k in default_ic_dict if k not  in ic_dict]:
-                    raise Exception(f"IC dictionary didnt contain keys: {keys}")
+                if keys := [k for k in default_params_dict if k not in params_dict]:
+                    raise Exception(
+                        f"Parameter dictionary didnt contain keys: {keys}")
+                if keys := [k for k in default_ic_dict if k not in ic_dict]:
+                    raise Exception(
+                        f"IC dictionary didnt contain keys: {keys}")
 
             for k in params_dict:
                 if k not in default_params_dict:
