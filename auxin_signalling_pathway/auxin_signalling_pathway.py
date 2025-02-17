@@ -13,7 +13,7 @@ from .reaction import Reaction
 
 
 class auxin_signalling_pathway():
-    def __init__(self, nARFs=1, nIAAs=1):
+    def __init__(self, nARFs=1, nIAAs=1, aux_func=None):
 
         self.nARFs = nARFs
         self.nIAAs = nIAAs
@@ -231,9 +231,8 @@ class auxin_signalling_pathway():
 
         self.state_var_eqns = state_var_eqns
 
-        self.rhs_func = self._generate_rhs_func(njitted=True)
-
-        self.cfunc_rhs = self._make_cfunc_rhs()
+        self.rhs_func = self.generate_rhs_func(njitted=True)
+        self.cfunc_rhs = self.make_cfunc_rhs(aux_func=aux_func)
 
     def get_rhs_func(self):
         return self.rhs_func
@@ -580,7 +579,12 @@ class auxin_signalling_pathway():
             data = nb.carray(data, n_data)
 
             params = data[1:].copy().flatten().astype(np.float64)
-            aux = data[0:1]
+
+            if aux_func:
+                aux_func(t)
+            else:
+                aux = data[0:1]
+
             res = rhs_func(y, params,
                            aux).astype(np.float64).flatten()
             assert (res.shape == y.shape)
