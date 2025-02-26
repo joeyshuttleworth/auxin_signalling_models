@@ -459,7 +459,7 @@ class auxin_signalling_pathway():
     def get_reactions_set(self):
         return self._reactions_set
 
-    def generate_ode_system(self):
+    def generate_ode_system(self, parameter_subs_dict={}):
         """Generate a list of sympy expressions comprising an ODE system
 
         :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
@@ -485,12 +485,18 @@ class auxin_signalling_pathway():
                                                                    variable))
 
         sub_dict = {sp.sympify(self.empty_set_node): 1.0}
-        odes = [ode.subs(sub_dict) for ode in odes]
+        odes = sp.Matrix([[ode.subs(sub_dict) for ode in odes]]).T
 
         # TODO include the fact that the promoter variables sum to 1
         constraints = []
 
-        return odes, free_variables, self.transition_rates, constraints
+        jacobian = sp.Matrix(odes).jacobian(sp.Matrix(state_variables))
+
+        odes = odes.subs(parameter_sub_dict)
+        transition_rates = self.transition_rates.subs(parameter_subs_dict)
+
+        return odes, self.free_variables, self.transition_rates.subs(parameter_sub_dict),\
+            constraints, jacobian
 
     def get_state_variables(self):
         """ Construct a list of the model's state variables
