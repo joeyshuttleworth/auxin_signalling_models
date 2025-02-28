@@ -30,13 +30,11 @@ class auxin_signalling_pathway():
 
         #  Initialise parameter symbols
         arf_symbols = [f"ARF_{i + 1}" for i in range(nARFs)]
-        self.arf_symbols = arf_symbols
 
         for arf in arf_symbols:
             self.add_state(arf, category='ARF')
 
         iaa_symbols = [f"iaa_{i + 1}" for i in range(nIAAs)]
-
         for iaa in iaa_symbols:
             self.add_state(iaa, category='IAA')
 
@@ -154,7 +152,7 @@ class auxin_signalling_pathway():
 
                 self.add_transition_rate(rate,
                                          1.0,
-                                         f"Rate of transcription"
+                                         f"Rate of transcription "
                                          f"for {rna_symbol} for promoter "
                                          f"{promoter}"
                                          )
@@ -213,10 +211,16 @@ class auxin_signalling_pathway():
             iaa = rna_symbol.split('__')[1]
 
             iaa_production_rate = f"k__{rna_symbol}__{iaa}"
-            self.add_transition_rate(iaa_production_rate)
+
+            rate_default_val = 1.0 if rna_symbols.index(rna_symbol)\
+                == iaa_symbols.index(iaa) else 0.0
+
+            self.add_transition_rate(iaa_production_rate, rate_default_val,
+                                     f"Rate of production of {iaa} from"
+                                     f"RNA {rna_symbol}")
 
             self.add_reaction([], [iaa],
-                              fwd_rates=[rna_production_rate],
+                              fwd_rates=[iaa_production_rate],
                               enzymes=[rna_symbol])
 
         for iaa in iaa_symbols:
@@ -229,10 +233,15 @@ class auxin_signalling_pathway():
                               [production_rate],
                               enzymes=rna_symbols)
 
+        self.iaa_symbols = iaa_symbols
+        self.arf_symbols = arf_symbols
+
         self.state_var_eqns = state_var_eqns
 
-        self.rhs_func = self.generate_rhs_func(njitted=True)
+        self.rhs_func = self._generate_rhs_func(njitted=True)
         self.cfunc_rhs = self.make_cfunc_rhs(aux_func=aux_func)
+
+        self.jac_func = self.generate_jacobian_func(njitted=True)
 
     def get_rhs_func(self):
         return self.rhs_func
@@ -492,11 +501,24 @@ class auxin_signalling_pathway():
 
         jacobian = sp.Matrix(odes).jacobian(sp.Matrix(state_variables))
 
-        odes = odes.subs(parameter_sub_dict)
-        transition_rates = self.transition_rates.subs(parameter_subs_dict)
+        if parameter_subs_dict:
+            odes = odes.subs(parameter_subs_dict)
 
-        return odes, self.free_variables, self.transition_rates.subs(parameter_sub_dict),\
-            constraints, jacobian
+        #  Will take final value found in dictionary (?)
+        transition_rates = {parameter_subs_dict[k] if k in parameter_subs_dict
+                            else k: v
+                            for k, v in self.transition_rates.items()}
+
+        # Ensure that parameters actually appear in the model
+        if parameter_subs_dict:
+            transition_rates = {parameter_subs_dict[key]
+                                if key in parameter_subs_dict
+                                else key:
+                                (value[0], "")
+                                for key, value in transition_rates.items()
+                                }
+
+        return odes, free_variables, transition_rates, constraints, jacobian
 
     def get_state_variables(self):
         """ Construct a list of the model's state variables
@@ -564,7 +586,7 @@ class auxin_signalling_pathway():
     def get_cfunc_rhs(self):
         return self.cfunc_rhs
 
-    def _make_cfunc_rhs(self):
+    def make_cfunc_rhs(self, aux_func=None):
         """Generate a c function which evaluates the RHS of the ODE system
 
         :returns: a c function with signature lsoda_sig for use solving our ODE
@@ -599,9 +621,43 @@ class auxin_signalling_pathway():
 
         return cfunc_rhs
 
+    def generate_jacobian_func(self, njitted=True):
+        odes, free_variables, _, \
+            _, jacobian = self.generate_ode_system()
+
+        #  Create column vector of ode expressions
+        odes = sp.Matrix([odes])
+
+        ic_dict = self.get_default_initial_conditions()
+
+        state_variables = sp.Matrix([s for s in ic_dict])
+        params_dict = self.get_default_parameters()
+        param_names = sp.Matrix(list(params_dict.keys()))
+
+        free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
+
+        _jac_func = sp.lambdify((state_variables, param_names,
+                                 free_variables), jacobian)
+        _jac_func = njit(_jac_func)
+
+        def jac_func(y, p, x):
+            ret = _jac_func(y, p, x)
+            return ret
+
+        if njitted:
+            jac_func = njit(jac_func)
+
+        return jac_func
+
+    def get_jacobian_func(self):
+        if self.jac_func:
+            return self.jac_func
+        else:
+            return self.generate_jacobian_func()
+
     def _generate_rhs_func(self, njitted=False):
         odes, free_variables, transition_rates, \
-            _ = self.generate_ode_system()
+            _, jacobian = self.generate_ode_system()
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
