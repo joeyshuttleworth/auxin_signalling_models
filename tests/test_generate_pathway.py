@@ -10,6 +10,9 @@ import sympy as sp
 from auxin_signalling_pathway.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
 
+from auxin_signalling_pathway.reduced_auxin_signalling_pathway import \
+    reduced_auxin_signalling_pathway as reduced_asp_class
+
 
 def setup_output_directory(dir_name, subdir_name):
     dirname = os.path.join(dir_name, subdir_name)
@@ -63,7 +66,7 @@ class TestGeneratePathway(unittest.TestCase):
             logging.info(asp_model.generate_ode_system())
 
     def generate_solve_ode(self, asp_model, i):
-        odes, free_variables, transition_rates, constraints, jacobian = \
+        odes, free_variables, transition_rates, constraints = \
             asp_model.generate_ode_system()
         with open(os.path.join(self.output_dir,
                                f"test_graph_{i}.txt"), 'w') as fout:
@@ -88,7 +91,7 @@ class TestGeneratePathway(unittest.TestCase):
         self.assertTrue(success and np.all(np.isfinite(res)))
 
     def test_substitution(self):
-        for i, kwargs in enumerate(self.kwargs_list):
+        for _, kwargs in enumerate(self.kwargs_list):
             asp_model = asp_class(**kwargs)
             subs_dict = {}
 
@@ -105,7 +108,7 @@ class TestGeneratePathway(unittest.TestCase):
                     for rna_symbol in asp_model.rna_symbols:
                         subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = 0.0
 
-            odes, free_variables, transition_rates, constraints, jacobian \
+            odes, free_variables, transition_rates, constraints \
                 = asp_model.generate_ode_system(parameter_subs_dict=subs_dict)
 
             logging.info(f"Transition rates: {transition_rates}")
@@ -118,6 +121,20 @@ class TestGeneratePathway(unittest.TestCase):
                     self.assertIn(sp.sympify(v), odes.free_symbols)
 
             logging.info(transition_rates)
+
+    def test_reduced_model(self):
+        for kwargs in self.kwargs_list:
+            asp_model = reduced_asp_class(**kwargs)
+
+            odes, free_variables, transition_rates, constraints \
+                = asp_model.generate_ode_system()
+
+            for k, v in asp_model.parameters_subs_dict.items():
+                self.assertIn(v, list(transition_rates.keys()))
+                # If the value has been substituted with a constant (i.e. 0)
+                # skip this check
+                if sp.sympify(v).free_symbols:
+                    self.assertIn(sp.sympify(v), odes.free_symbols)
 
 
 if __name__ == "__main__":

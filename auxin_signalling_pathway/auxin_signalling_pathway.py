@@ -28,6 +28,8 @@ class auxin_signalling_pathway():
 
         self.strict = True
 
+        self.parameters_subs_dict = {}
+
         #  Initialise parameter symbols
         arf_symbols = [f"ARF_{i + 1}" for i in range(nARFs)]
 
@@ -241,7 +243,7 @@ class auxin_signalling_pathway():
         self.rhs_func = self._generate_rhs_func(njitted=True)
         self.cfunc_rhs = self.make_cfunc_rhs(aux_func=aux_func)
 
-        self.jac_func = self.generate_jacobian_func(njitted=True)
+        self.jac_func = None
 
     def get_rhs_func(self):
         return self.rhs_func
@@ -468,7 +470,7 @@ class auxin_signalling_pathway():
     def get_reactions_set(self):
         return self._reactions_set
 
-    def generate_ode_system(self, parameter_subs_dict={}):
+    def generate_ode_system(self, parameter_subs_dict=None):
         """Generate a list of sympy expressions comprising an ODE system
 
         :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
@@ -476,6 +478,9 @@ class auxin_signalling_pathway():
         constraints (sympy Expressions)
 
         """
+
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameters_subs_dict
 
         free_variables = [self.aux_symbol]
 
@@ -499,8 +504,6 @@ class auxin_signalling_pathway():
         # TODO include the fact that the promoter variables sum to 1
         constraints = []
 
-        jacobian = sp.Matrix(odes).jacobian(sp.Matrix(state_variables))
-
         if parameter_subs_dict:
             odes = odes.subs(parameter_subs_dict)
 
@@ -518,7 +521,7 @@ class auxin_signalling_pathway():
                                 for key, value in transition_rates.items()
                                 }
 
-        return odes, free_variables, transition_rates, constraints, jacobian
+        return odes, free_variables, transition_rates, constraints
 
     def get_state_variables(self):
         """ Construct a list of the model's state variables
@@ -623,7 +626,7 @@ class auxin_signalling_pathway():
 
     def generate_jacobian_func(self, njitted=True):
         odes, free_variables, _, \
-            _, jacobian = self.generate_ode_system()
+            _ = self.generate_ode_system()
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
@@ -657,7 +660,7 @@ class auxin_signalling_pathway():
 
     def _generate_rhs_func(self, njitted=False):
         odes, free_variables, transition_rates, \
-            _, jacobian = self.generate_ode_system()
+            _ = self.generate_ode_system()
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
@@ -709,7 +712,6 @@ class auxin_signalling_pathway():
         :return: a dictionary of parameter values
         """
 
-        print(self.transition_rates)
         param_dict = {k: v[0] for k, v in self.transition_rates.items()}
 
         # sort parameters
