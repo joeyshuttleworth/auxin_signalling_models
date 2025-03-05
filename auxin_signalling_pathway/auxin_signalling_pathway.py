@@ -240,7 +240,7 @@ class auxin_signalling_pathway():
 
         self.state_var_eqns = state_var_eqns
 
-        self.rhs_func = self._generate_rhs_func(njitted=True)
+        self.rhs_func = self.generate_rhs_func(njitted=True)
         self.cfunc_rhs = self.make_cfunc_rhs(aux_func=aux_func)
 
         self.jac_func = None
@@ -507,15 +507,12 @@ class auxin_signalling_pathway():
         if parameter_subs_dict:
             odes = odes.subs(parameter_subs_dict)
 
-        #  Will take final value found in dictionary (?)
-        transition_rates = {parameter_subs_dict[k] if k in parameter_subs_dict
-                            else k: v
-                            for k, v in self.transition_rates.items()}
-
+        transition_rates = self.transition_rates.copy()
         # Ensure that parameters actually appear in the model
         if parameter_subs_dict:
             transition_rates = {parameter_subs_dict[key]
                                 if key in parameter_subs_dict
+                                and len(sp.sympify(parameter_subs_dict[key]).free_symbols) == 1
                                 else key:
                                 (value[0], "")
                                 for key, value in transition_rates.items()
@@ -535,7 +532,7 @@ class auxin_signalling_pathway():
                             if s != self.empty_set_node
                             and s != self.aux_symbol]))
 
-    def make_forward_solver(self):
+    def make_forward_solver(self, parameter_subs_dict={}):
         """Generate a function which simulates the model
 
         :returns: a function returning model output under different times,
@@ -543,7 +540,8 @@ class auxin_signalling_pathway():
 
         """
 
-        cfunc_ptr = self.cfunc_rhs.address
+        cfunc = self.make_cfunc_rhs(parameter_subs_dict=parameter_subs_dict)
+        cfunc_ptr = cfunc.address
 
         default_params_dict = self.get_default_parameters()
         default_ic_dict = self.get_default_initial_conditions()
@@ -589,7 +587,7 @@ class auxin_signalling_pathway():
     def get_cfunc_rhs(self):
         return self.cfunc_rhs
 
-    def make_cfunc_rhs(self, aux_func=None):
+    def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict={}):
         """Generate a c function which evaluates the RHS of the ODE system
 
         :returns: a c function with signature lsoda_sig for use solving our ODE
@@ -601,7 +599,8 @@ class auxin_signalling_pathway():
 
         # Number of params + 'free variables' i.e. auxin
         n_data = len(self.get_default_parameters()) + 1
-        rhs_func = self.get_rhs_func()
+        rhs_func = self.generate_rhs_func(parameter_subs_dict=parameter_subs_dict,
+                                          njitted=True)
 
         @cfunc(lsoda_sig)
         def cfunc_rhs(t, y, dy, data):
@@ -658,9 +657,9 @@ class auxin_signalling_pathway():
         else:
             return self.generate_jacobian_func()
 
-    def _generate_rhs_func(self, njitted=False):
+    def generate_rhs_func(self, njitted=False, parameter_subs_dict={}):
         odes, free_variables, transition_rates, \
-            _ = self.generate_ode_system()
+            _ = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
@@ -669,14 +668,13 @@ class auxin_signalling_pathway():
 
         state_variables = sp.Matrix([s for s in ic_dict])
         params_dict = self.get_default_parameters()
-        param_names = sp.Matrix(list(params_dict.keys()))
 
+        param_names = sp.Matrix(list(transition_rates.keys()))
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
-
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)
 
-        params = np.array([p for p in params_dict.values()]).astype(np.float64)
+        params = np.array([x[0] for x in transition_rates.values()]).astype(np.float64)
         ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
         rhs_func(ic, params, np.array([.99]))
 
@@ -775,3 +773,7 @@ class auxin_signalling_pathway():
         if output_path:
             network.from_nx(graph)
             network.show(output_path, notebook=False)
+
+    def remove_state(self, state):
+        # TODO Allow removal of states
+        raise NotImplementedException("Not yet implemented")

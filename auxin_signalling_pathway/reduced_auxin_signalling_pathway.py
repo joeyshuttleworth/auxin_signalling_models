@@ -67,11 +67,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         if parameter_subs_dict:
             odes = odes.subs(parameter_subs_dict)
 
-        #  Will take final value found in dictionary (?)
-        transition_rates = {parameter_subs_dict[k] if k in parameter_subs_dict
-                            else k: v
-                            for k, v in self.transition_rates.items()}
-
+        transition_rates = self.transition_rates.copy()
         # Ensure that parameters actually appear in the model
         if parameter_subs_dict:
             transition_rates = {parameter_subs_dict[key]
@@ -123,7 +119,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                             and s != self.aux_symbol]))
 
 
-    def make_cfunc_rhs(self, aux_func=None):
+    def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict={}):
         """Generate a c function which evaluates the RHS of the ODE system
 
         :returns: a c function with signature lsoda_sig for use solving our ODE
@@ -131,7 +127,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         """
 
-        odes, free_variables, _, constraints = self.generate_ode_system(reduced=True)
+        odes, free_variables, transition_rates, constraints = \
+            self.generate_ode_system(reduced=True,
+                                     parameter_subs_dict=parameter_subs_dict)
 
         # Assume the promoter expression is the only constraint
         promoter_exprs = constraints[0]
@@ -139,21 +137,23 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         n_promoter_vars = len(promoter_vars)
 
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
-        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s) for s in promoter_vars[1:]])})
+        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
+                                                          for s in promoter_vars[1:]])})
 
         promoter_expr_jac = promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T)
 
         # For complicated models, this simplification may take some time
         # TODO rewrite more efficiently
-        promoter_expr_inhomog = sp.simplify(promoter_expr - promoter_expr_jac @ sp.Matrix([promoter_vars[1:]]).T)
-        parameter_vars = list(self.get_default_parameters().keys())
+        promoter_expr_inhomog = sp.simplify(promoter_expr - promoter_expr_jac\
+                                            @ sp.Matrix([promoter_vars[1:]]).T)
+
+        parameter_vars = list(transition_rates.keys())
 
         state_vars = self.get_state_variables()
 
         promoter_inputs = (state_vars, parameter_vars, free_variables)
         promoter_expr_jac_func = njit(sp.lambdify(promoter_inputs, promoter_expr_jac))
         inhomog_expr_func = njit(sp.lambdify(promoter_inputs, promoter_expr_inhomog))
-
 
         n_y = len(self.get_state_variables())
 
@@ -167,13 +167,12 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             dy = nb.carray(dy, n_y)
             data = nb.carray(data, n_data)
 
-            # if aux_func:
-            #     aux = aux_func(t)
-            # else:
-            #     aux = data[0]
+            if aux_func:
+                aux = aux_func(t)
+            else:
+                aux = data[0]
 
-            aux = np.array([.99])
-
+            aux = np.array([aux])
 
             params = data[1:].copy().flatten().astype(np.float64)
 
@@ -195,7 +194,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return cfunc_rhs
 
-    def _generate_rhs_func(self, njitted=False):
+    def generate_rhs_func(self, njitted=False):
         odes, free_variables, transition_rates, \
             _ = self.generate_ode_system()
 

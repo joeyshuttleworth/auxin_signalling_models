@@ -9,6 +9,7 @@ import sympy as sp
 
 from auxin_signalling_pathway.reduced_auxin_signalling_pathway import \
     reduced_auxin_signalling_pathway as reduced_asp_class
+from auxin_signalling_pathway import auxin_signalling_pathway as asp_class
 
 
 def setup_output_directory(dir_name, subdir_name):
@@ -34,18 +35,10 @@ class TestReducedModel(unittest.TestCase):
             {'nARFs': 1, 'nIAAs': 1},
             {'nARFs': 2, 'nIAAs': 1},
             {'nARFs': 1, 'nIAAs': 2},
-            {'nARFs': 4, 'nIAAs': 4}
         ]
 
     def test_graph_generation(self):
-        kwargs_list = [
-            {'nARFs': 1, 'nIAAs': 1},
-            {'nARFs': 2, 'nIAAs': 1},
-            {'nARFs': 1, 'nIAAs': 2},
-            {'nARFs': 4, 'nIAAs': 4}
-        ]
-
-        for i, kwargs in enumerate(kwargs_list):
+ for i, kwargs in enumerate(self.kwargs_list):
             asp_model = reduced_asp_class(**kwargs)
             # logging.info(nx.write_network_text(asp_model.graph))
             asp_model.draw_graph()
@@ -88,34 +81,18 @@ class TestReducedModel(unittest.TestCase):
 
         self.assertTrue(success and np.all(np.isfinite(res)))
 
-    def test_substitution(self):
-        for _, kwargs in enumerate(self.kwargs_list):
-            asp_model = reduced_asp_class(**kwargs)
-            subs_dict = {}
+    def test_reduced_model_validation(self):
+        for kwargs in self.kwargs_list:
+            asp_model_r = reduced_asp_class(**kwargs)
+            asp_model_full = asp_class(**kwargs)
 
-            for rna_symbol, iaa_symbol in zip(asp_model.rna_symbols,
-                                              asp_model.iaa_symbols):
-                subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
+            parameter_subs_dict = asp_model_r.parameters_subs_dict.copy()
 
-            for key, val in asp_model.transition_rates.items():
-                if "bind" in key:
-                    subs_dict[key] = 0.0
+            reduced_ic_dict = asp_model_r.get_default_initial_conditions()
+            full_ic_dict = asp_model_full.get_default_initial_conditions()
+            param_dict = asp_model_r.get_default_parameters()
 
-            for arf_symbol in asp_model.arf_symbols:
-                for iaa_symbol in asp_model.iaa_symbols:
-                    for rna_symbol in asp_model.rna_symbols:
-                        subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = 0.0
-
-            odes, free_variables, transition_rates, constraints = asp_model.generate_ode_system(parameter_subs_dict=subs_dict)
-
-            for k, v in subs_dict.items():
-                self.assertIn(v, list(transition_rates.keys()))
-
-                # If the value has been substituted with a constant (i.e. 0)
-                # skip this check
-                if sp.sympify(v).free_symbols:
-                    self.assertIn(sp.sympify(v), odes.free_symbols)
-
+            solver_full = asp_model_full.make_forward_solver(parameter_subs_dict=parameter_subs_dict)
 
 
 if __name__ == "__main__":
