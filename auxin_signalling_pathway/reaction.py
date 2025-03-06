@@ -26,7 +26,7 @@ class Reaction:
         return f"Reaction: reactants={self.reactants},"\
             f"products={self.products}, "\
             f"fwd_rates={self.fwd_rates}, bwd_rates={self.bwd_rates}, "\
-            f"enzymes={self.enzymes}"\
+            f"enzymes={self.enzymes}, "\
             f"reaction_type={self.reaction_type}"
 
     def reversed(self):

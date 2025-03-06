@@ -15,6 +15,9 @@ from .reaction import Reaction
 class auxin_signalling_pathway():
     def __init__(self, nARFs=1, nIAAs=1, aux_func=None):
 
+        self.QSS_bound_species = {}
+        self.parameter_subs_dict = {}
+
         self.nARFs = nARFs
         self.nIAAs = nIAAs
 
@@ -28,7 +31,7 @@ class auxin_signalling_pathway():
 
         self.strict = True
 
-        self.parameters_subs_dict = {}
+        self.parameter_sub_dict = {}
 
         #  Initialise parameter symbols
         arf_symbols = [f"ARF_{i + 1}" for i in range(nARFs)]
@@ -56,6 +59,7 @@ class auxin_signalling_pathway():
         dimer_symbols = [f"D__{s1}__{s2}"
                          for s1 in arf_symbols + iaa_symbols
                          for s2 in arf_symbols + iaa_symbols if s2 >= s1]
+        self.dimer_symbols = dimer_symbols
 
         for dimer in dimer_symbols:
             self.add_state(dimer, category='dimer')
@@ -104,7 +108,7 @@ class auxin_signalling_pathway():
             dissociation_rate = sp.sympify(f"d__{d}")
 
             self.add_transition_rate(association_rate,
-                                     0.25,
+                                     0.001,
                                      f"Association rate of dimer {d}")
             self.add_transition_rate(dissociation_rate,
                                      0.1,
@@ -240,12 +244,16 @@ class auxin_signalling_pathway():
 
         self.state_var_eqns = state_var_eqns
 
-        self.rhs_func = self.generate_rhs_func(njitted=True)
-        self.cfunc_rhs = self.make_cfunc_rhs(aux_func=aux_func)
+        self.rhs_func = None
+        self.cfunc_rhs = None
 
         self.jac_func = None
 
-    def get_rhs_func(self):
+    def get_rhs_func(self, **kwargs):
+        if self.rhs_func is None and not kwargs:
+            self.rhs_func = self.generate_rhs_func()
+        elif kwargs:
+            return self.generate_rhs_func(**kwargs)
         return self.rhs_func
 
     def add_transition_rate(self, rate, default_value=0.0,
@@ -391,8 +399,7 @@ class auxin_signalling_pathway():
                         category='enzymatic'
                     )
 
-    @staticmethod
-    def _get_reaction_terms(reaction, variable):
+    def _get_reaction_terms(self, reaction, variable, do_QSS_sub=True):
         """Get a term for the ODE formulation of a model from a particular reaction
 
         This function is used to generate an ODE system describing the
@@ -417,14 +424,19 @@ class auxin_signalling_pathway():
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products:
-                terms += auxin_signalling_pathway.\
-                    _get_reaction_terms(reaction.reversed(), variable)
+                terms += self._get_reaction_terms(reaction.reversed(), variable,
+                                                  do_QSS_sub=False)
             fwd_rate = sp.sympify(
                 reaction.fwd_rates[0]) if reaction.fwd_rates else 0
             bwd_rate = sp.sympify(
                 reaction.bwd_rates[0]) if reaction.bwd_rates else 0
 
             if variable in reaction.reactants:
+                if variable in self.QSS_bound_species:
+                    if np.any([s in self.QSS_bound_species[variable]
+                               for s in list(reaction.products) + list(reaction.reactants)]):
+                        return terms
+
                 terms.append(-sp.prod([sp.sympify(reactant)
                                        for reactant in reaction.reactants])
                              * fwd_rate)
@@ -442,35 +454,37 @@ class auxin_signalling_pathway():
                              sp.prod([sp.sympify(x) for x in reaction.enzymes])
                              * bwd_rate]
 
-            return terms
+            if not self.QSS_bound_species:
+                return terms
 
-        elif reaction.reaction_type == "tf-hill-act":
-            if variable in reaction.products:
-                assert len(reaction.products) == 1
-                assert len(reaction.reactants) == 0
-                assert len(reaction.enzymes) == 1
+            if variable in [s for v in self.QSS_bound_species.values() for s in v]:
+                return terms
 
-                y = sp.sympify(reaction.enzymes[0])
-                k, ka, n = [sp.sympify(x) for x in reaction.fwd_rates]
-                terms.append(k * y / (ka**n + y**n))
-            return terms
+            return_terms = []
+            if do_QSS_sub:
+                for term in terms:
+                    free_symbols = set([str(s) for s in term.free_symbols])
+                    for s in [s for s in free_symbols if s
+                                in self.QSS_bound_species]:
+                        v = self.QSS_bound_species[s]
+                        if variable not in v:
+                            term = term.subs({
+                                s: sp.sympify(s)**2 / sum([sp.sympify(x)
+                                                            for x in [s] + list(v)])
+                            })
+                    return_terms.append(term)
+            else:
+                return_terms = terms
 
-        elif reaction.reaction_type == "tf-hill-repr":
-            if variable in reaction.products:
-                assert len(reaction.products) == 0
-                assert len(reaction.enzymes) == 1
-                y = sp.sympify(reaction.enzymes[0])
-                k, ka, n = [sp.sympify(x) for x in reaction.fwd_rates]
-                terms.append(k * (1 - y) / (ka**n + y**n))
-            return terms
-
+            return return_terms
         else:
             raise NotImplementedError("")
 
     def get_reactions_set(self):
         return self._reactions_set
 
-    def generate_ode_system(self, parameter_subs_dict=None):
+    def generate_ode_system(self, parameter_subs_dict=None,
+                            state_variables=None):
         """Generate a list of sympy expressions comprising an ODE system
 
         :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
@@ -480,17 +494,20 @@ class auxin_signalling_pathway():
         """
 
         if parameter_subs_dict is None:
-            parameter_subs_dict = self.parameters_subs_dict
+            parameter_subs_dict = self.parameter_subs_dict.copy()
 
         free_variables = [self.aux_symbol]
 
-        state_variables = list(self.get_default_initial_conditions().keys())
+        if state_variables is None:
+            state_variables = self.get_state_variables()
 
         odes = [sp.sympify('0') for _ in state_variables]
 
         for reaction in self._reactions_set:
             for variable in reaction.reactants + reaction.products:
                 if variable == self.empty_set_node:
+                    continue
+                if variable not in state_variables:
                     continue
 
                 var_index = state_variables.index(variable)
@@ -584,7 +601,12 @@ class auxin_signalling_pathway():
 
         return solver
 
-    def get_cfunc_rhs(self):
+    def get_cfunc_rhs(self, **kwargs):
+        if self.cfunc_rhs is None and not kwargs:
+            self.cfunc = self.make_cfunc_rhs()
+        elif kwargs:
+            return self.make_cfunc_rhs()
+
         return self.cfunc_rhs
 
     def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict={}):
@@ -657,7 +679,7 @@ class auxin_signalling_pathway():
         else:
             return self.generate_jacobian_func()
 
-    def generate_rhs_func(self, njitted=False, parameter_subs_dict={}):
+    def generate_rhs_func(self, njitted=True, parameter_subs_dict={}):
         odes, free_variables, transition_rates, \
             _ = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
 
@@ -698,19 +720,26 @@ class auxin_signalling_pathway():
         ic_dict['G'] = 1.0
 
         for arf in self.arf_symbols:
-            ic_dict[arf] = 1.0
+            ic_dict[arf] = 0
 
         ic_dict = {key: ic_dict[key] for key in sorted(ic_dict.keys())}
 
         return ic_dict
 
-    def get_default_parameters(self):
+    def get_default_parameters(self, parameter_subs_dict=None):
         """ Return a default parameter set
 
         :return: a dictionary of parameter values
         """
 
-        param_dict = {k: v[0] for k, v in self.transition_rates.items()}
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict
+
+        param_dict = {parameter_subs_dict[k] if k in parameter_subs_dict
+                      and sp.sympify(parameter_subs_dict[k]).free_symbols == 1
+                      else k:
+                      v[0]
+                      for k, v in self.transition_rates.items()}
 
         # sort parameters
         param_dict = {key: param_dict[key] for key in sorted(list(param_dict))}
@@ -776,4 +805,4 @@ class auxin_signalling_pathway():
 
     def remove_state(self, state):
         # TODO Allow removal of states
-        raise NotImplementedException("Not yet implemented")
+        raise NotImplementedError("Not yet implemented")

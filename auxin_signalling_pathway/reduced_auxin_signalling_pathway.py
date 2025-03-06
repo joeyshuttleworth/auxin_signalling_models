@@ -26,10 +26,14 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                 for rna_symbol in self.rna_symbols:
                     subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = 0.0
 
-        self.parameters_subs_dict =  subs_dict
+        self.QSS_bound_species = {arf: (f"G__{arf}",) for arf in self.arf_symbols} |\
+            {dimer: (f"G__{dimer[3:]}",) for dimer in self.dimer_symbols
+             if dimer.split('__')[1] in self.arf_symbols}
+
+        self.parameter_subs_dict =  subs_dict
 
 
-    def generate_ode_system(self, parameter_subs_dict=None, reduced=True):
+    def generate_ode_system(self, reduced=True, **kwargs):
         """Generate a list of sympy expressions comprising an ODE system
 
         :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
@@ -37,59 +41,23 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         constraints (sympy Expressions)
 
         """
+        odes, free_variables, transition_rates, constraints = \
+            super().generate_ode_system(state_variables=super().get_state_variables(),
+                                        **kwargs)
 
-        if parameter_subs_dict is None:
-            parameter_subs_dict = self.parameters_subs_dict
-
-        state_variables = self.get_state_variables()
-        all_state_variables = [s for s in list(sorted(self.graph.nodes()))
-                               if s not in [self.aux_symbol,
-                                            self.empty_set_node]]
-
-        odes = [sp.sympify('0') for _ in all_state_variables]
-
-        for reaction in self._reactions_set:
-            for variable in reaction.reactants + reaction.products:
-                if variable == self.empty_set_node:
-                    continue
-
-                var_index = all_state_variables.index(variable)
-                odes[var_index] += sp.Add(*
-                                          self._get_reaction_terms(reaction,
-                                                                   variable))
-
-        sub_dict = {sp.sympify(self.empty_set_node): 1.0}
-        odes = sp.Matrix([[ode.subs(sub_dict) for ode in odes]]).T
-
-        # TODO include the fact that the promoter variables sum to 1
-        constraints = []
-
-        if parameter_subs_dict:
-            odes = odes.subs(parameter_subs_dict)
-
-        transition_rates = self.transition_rates.copy()
-        # Ensure that parameters actually appear in the model
-        if parameter_subs_dict:
-            transition_rates = {parameter_subs_dict[key]
-                                if key in parameter_subs_dict
-                                else key:
-                                (value[0], "")
-                                for key, value in transition_rates.items()
-                                }
-        state_vars = sorted(self.graph.nodes())
-
-        free_variables = [self.aux_symbol]
         if reduced:
+            state_vars = super().get_state_variables()
             promoter_vars = [s for s in state_vars if s[0]=='G']
-            promoter_odes = sp.Matrix([[ode for state_var, ode in zip(state_vars, odes) if str(state_var[0]) in promoter_vars]]).T
-
+            promoter_odes = sp.Matrix([[ode for state_var, ode in zip(state_vars, odes)
+                                        if str(state_var[0]) in promoter_vars]]).T
             promoter_odes = sp.Matrix([promoter_odes]).T
-            constraints = [promoter_odes, sp.sympify(1) - \
-                           sum([sp.sympify(s) for s in promoter_vars])]
-            include_indices = [i for i, state in enumerate(all_state_variables)
-                            if state not in promoter_vars]
+            include_indices = [i for i, state in enumerate(state_vars)
+                               if state not in promoter_vars]
+            print(odes)
+            odes = sp.Matrix(np.array(odes).flatten()[include_indices])
+            constraints += [promoter_odes]
 
-            odes = sp.Matrix(np.array(odes)[include_indices])
+            print(include_indices, state_vars)
 
         return odes, free_variables, transition_rates, constraints
 
@@ -159,11 +127,19 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         # Number of params + 'free variables' i.e. auxin
         n_data = len(self.get_default_parameters()) + 1
-        rhs_func = self.get_rhs_func()
+        rhs_func = self.get_rhs_func(parameter_subs_dict=parameter_subs_dict,
+                                     njitted=True)
+
+        promoter_vals = np.full(n_promoter_vars, 1.0 / n_promoter_vars)
+        ic_vals = np.full(n_y, 1.0)
+        parameter_vals = np.array([v[0] for v in transition_rates.values()])
+
+        print(state_vars, odes)
+        print(len(ic_vals), len(odes))
 
         @cfunc(lsoda_sig)
         def cfunc_rhs(t, y, dy, data):
-            y = nb.carray(y, n_y)
+            y = nb.carray(y, n_y).astype(np.float64)
             dy = nb.carray(dy, n_y)
             data = nb.carray(data, n_data)
 
@@ -177,46 +153,50 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             params = data[1:].copy().flatten().astype(np.float64)
 
             promoter_vals = np.full(n_promoter_vars, 1.0 / n_promoter_vars)
-            # # steady state doesn't depend on promoter states provided conservation
-            promoter_expr_jac = promoter_expr_jac_func(y, params, aux)
-            inhomog_val = inhomog_expr_func(y, params, aux)
-            promoter_vals = np.linalg.solve(promoter_expr_jac, inhomog_val).flatten()
 
-            G = 1.0 - np.sum(promoter_vals)
-            promoter_vals = np.concatenate((np.array([G]), promoter_vals))
+            # # steady state doesn't depend on promoter states provided conservation
+            # promoter_expr_jac = promoter_expr_jac_func(y, params, aux).astype(np.float64)
+
+            # inhomog_val = inhomog_expr_func(y, params, aux).astype(np.float64)
+            # promoter_vals = np.linalg.solve(promoter_expr_jac, inhomog_val).flatten()
+            # G = 1.0 - np.sum(promoter_vals)
+            # promoter_vals = np.concatenate((np.array([G]), promoter_vals))
+
+            # TODO add variable to scale promoter vars
+            # gscale = 1.0
+            # promoter_vals = promoter_vals * gscale
 
             res = rhs_func(y, params,
                            aux, promoter_vals).astype(np.float64).flatten()
 
-            assert (res.shape == y.shape)
+            assert res.shape == y.shape
             dy[:] = res[:]
             return
 
         return cfunc_rhs
 
-    def generate_rhs_func(self, njitted=False):
+    def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
-            _ = self.generate_ode_system()
+            _ = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
+                                         reduced=True)
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
         state_variables = self.get_state_variables()
-        params_dict = self.get_default_parameters()
-        param_names = sp.Matrix(list(params_dict.keys()))
+        param_names = sp.Matrix(list(transition_rates.keys()))
 
         state_vars = super().get_state_variables()
         promoter_vars = [s for s in state_vars if s[0]=='G']
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
 
-        rhs_func = sp.lambdify((state_variables, param_names,
-                                free_variables, promoter_vars), odes)
-
+        _rhs_func = sp.lambdify((state_variables, param_names,
+                                     free_variables, promoter_vars), odes)
         if njitted:
-            rhs_func = njit(rhs_func)
+            _rhs_func = njit(_rhs_func)
 
-        return rhs_func
+        return _rhs_func
 
 
     def generate_jacobian_func(self, njitted=False):
