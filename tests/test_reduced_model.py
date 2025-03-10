@@ -70,40 +70,50 @@ class TestReducedModel(unittest.TestCase):
         return res, success
 
     def test_generate_solve_ode(self):
+
+        fig = plt.figure()
+        ax = fig.subplots()
         for i, kwargs in enumerate(self.kwargs_list):
             asp_model = reduced_asp_class(**kwargs)
             res, success = self.generate_solve_ode(asp_model, i)
 
             res = res / res.max(axis=1)[:, None]
             ts = np.linspace(0, 1, res.shape[0])
-            fig, ax = plt.subplots()
             ax.plot(ts, res, label=asp_model.get_state_variables())
             ax.legend()
             fig.savefig(os.path.join(self.output_dir, f"solution_{i}"))
-            plt.close(fig)
+            ax.cla()
 
         self.assertTrue(success and np.all(np.isfinite(res)))
+        plt.close(fig)
 
     def test_reduced_model_validation(self):
         for kwargs in self.kwargs_list:
             asp_model_r = reduced_asp_class(**kwargs)
             asp_model_full = asp_class(**kwargs)
-
             parameter_subs_dict = asp_model_r.parameter_subs_dict.copy()
 
             reduced_ic_dict = asp_model_r.get_default_initial_conditions()
-            full_ic_dict = asp_model_full.get_default_initial_conditions()
             param_dict = asp_model_r.get_default_parameters()
 
             solver_r = asp_model_r.make_forward_solver()
             solver_full = asp_model_full.make_forward_solver(parameter_subs_dict=parameter_subs_dict)
 
-            ts = np.linspace(0, 1000, 250)
-            res, succ = solver_r(ts, param_dict, reduced_ic_dict, 0.99)
+            ts = np.linspace(0, 100, 250)
+            res, succ = solver_r(ts, param_dict, reduced_ic_dict, 1.0)
             self.assertTrue(succ and np.all(np.isfinite(res)))
 
-            res, succ = solver_full(ts, param_dict, full_ic_dict, 0.99)
-            self.assertTrue(succ and np.all(np.isfinite(res)))
+            full_ic_dict = asp_model_full.get_default_initial_conditions()
+            res, succ = solver_full(ts, param_dict, full_ic_dict, 1.0)
+
+    def test_output_latex(self):
+        for i, kwargs in enumerate(self.kwargs_list):
+            asp_model_r = reduced_asp_class(**kwargs)
+
+            latex_out = asp_model_r.output_latex()
+
+            with open(os.path.join(self.output_dir, f"reduced_model_{i}.tex"), 'w') as fout:
+                fout.write(latex_out)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,13 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         subs_dict = {}
 
+        for arf in self.arf_symbols:
+            promoter_symbol = f"G__{arf}"
+            self.remove_state(promoter_symbol)
+
+            if promoter_symbol in self.promoter_symbols:
+                self.promoter_symbols.remove(promoter_symbol)
+
         for rna_symbol, iaa_symbol in zip(self.rna_symbols,
                                             self.iaa_symbols):
             subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
@@ -24,16 +31,15 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         for arf_symbol in self.arf_symbols:
             for iaa_symbol in self.iaa_symbols:
                 for rna_symbol in self.rna_symbols:
-                    subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = 0.0
+                    subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = f"0.5 * k__G__{arf_symbol}__{arf_symbol}_{rna_symbol}"
 
-        self.QSS_bound_species = {arf: (f"G__{arf}",) for arf in self.arf_symbols} |\
-            {dimer: (f"G__{dimer[3:]}",) for dimer in self.dimer_symbols
-             if dimer.split('__')[1] in self.arf_symbols}
+        self.QSS_bound_species = {dimer: (f"G__{dimer[3:]}",) for dimer in self.dimer_symbols
+                                  if dimer.split('__')[1] in self.arf_symbols}
 
         self.parameter_subs_dict =  subs_dict
 
-
-    def generate_ode_system(self, reduced=True, **kwargs):
+    def generate_ode_system(self, reduced=True, do_QSS_sub=True, parameter_subs_dict=None,
+                            **kwargs):
         """Generate a list of sympy expressions comprising an ODE system
 
         :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
@@ -41,23 +47,47 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         constraints (sympy Expressions)
 
         """
+
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict
+
         odes, free_variables, transition_rates, constraints = \
             super().generate_ode_system(state_variables=super().get_state_variables(),
+                                        parameter_subs_dict=parameter_subs_dict,
                                         **kwargs)
-
         if reduced:
             state_vars = super().get_state_variables()
             promoter_vars = [s for s in state_vars if s[0]=='G']
             promoter_odes = sp.Matrix([[ode for state_var, ode in zip(state_vars, odes)
-                                        if str(state_var[0]) in promoter_vars]]).T
+                                        if state_var in promoter_vars]]).T
+
+            if do_QSS_sub:
+                new_odes = []
+                for state_var, ode in zip(state_vars, odes):
+                    if state_var in promoter_vars:
+                        new_odes.append(ode)
+                        continue
+                    free_symbols = set([str(s) for s in ode.free_symbols])
+                    for s in [s for s in free_symbols if s
+                                in self.QSS_bound_species]:
+                        v = self.QSS_bound_species[s]
+                        if state_var not in v:
+                            ode = ode.subs({
+                                s: sp.sympify(s)**2 / sum([sp.sympify(x)
+                                                            for x in [s] + list(v)])
+                            })
+                            ode = ode.subs({s: 0.0 for s in v})
+                    new_odes.append(ode)
+
+                odes = sp.Matrix([new_odes]).T
+
+            odes = odes.subs(parameter_subs_dict)
+
             promoter_odes = sp.Matrix([promoter_odes]).T
             include_indices = [i for i, state in enumerate(state_vars)
                                if state not in promoter_vars]
-            print(odes)
             odes = sp.Matrix(np.array(odes).flatten()[include_indices])
             constraints += [promoter_odes]
-
-            print(include_indices, state_vars)
 
         return odes, free_variables, transition_rates, constraints
 
@@ -87,7 +117,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                             and s != self.aux_symbol]))
 
 
-    def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict={}):
+    def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict=None):
         """Generate a c function which evaluates the RHS of the ODE system
 
         :returns: a c function with signature lsoda_sig for use solving our ODE
@@ -95,20 +125,28 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         """
 
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict
+
         odes, free_variables, transition_rates, constraints = \
             self.generate_ode_system(reduced=True,
                                      parameter_subs_dict=parameter_subs_dict)
 
         # Assume the promoter expression is the only constraint
         promoter_exprs = constraints[0]
+
+        print(constraints)
+
         promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0]=='G']
+        print(promoter_vars)
+
         n_promoter_vars = len(promoter_vars)
 
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
                                                           for s in promoter_vars[1:]])})
 
-        promoter_expr_jac = promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T)
+        promoter_expr_jac = sp.simplify(promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T))
 
         # For complicated models, this simplification may take some time
         # TODO rewrite more efficiently
@@ -119,7 +157,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         state_vars = self.get_state_variables()
 
-        promoter_inputs = (state_vars, parameter_vars, free_variables)
+        promoter_inputs = (state_vars, [x for p in parameter_vars for x in
+                                        sp.sympify(p).free_symbols], free_variables)
+
         promoter_expr_jac_func = njit(sp.lambdify(promoter_inputs, promoter_expr_jac))
         inhomog_expr_func = njit(sp.lambdify(promoter_inputs, promoter_expr_inhomog))
 
@@ -129,13 +169,6 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         n_data = len(self.get_default_parameters()) + 1
         rhs_func = self.get_rhs_func(parameter_subs_dict=parameter_subs_dict,
                                      njitted=True)
-
-        promoter_vals = np.full(n_promoter_vars, 1.0 / n_promoter_vars)
-        ic_vals = np.full(n_y, 1.0)
-        parameter_vals = np.array([v[0] for v in transition_rates.values()])
-
-        print(state_vars, odes)
-        print(len(ic_vals), len(odes))
 
         @cfunc(lsoda_sig)
         def cfunc_rhs(t, y, dy, data):
@@ -152,19 +185,20 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
             params = data[1:].copy().flatten().astype(np.float64)
 
-            promoter_vals = np.full(n_promoter_vars, 1.0 / n_promoter_vars)
+            promoter_vals = np.full(n_promoter_vars, 0.0)
 
-            # # steady state doesn't depend on promoter states provided conservation
-            # promoter_expr_jac = promoter_expr_jac_func(y, params, aux).astype(np.float64)
+            # steady state doesn't depend on promoter states provided conservation
+            promoter_expr_jac = promoter_expr_jac_func(y, params, aux).astype(np.float64)
 
-            # inhomog_val = inhomog_expr_func(y, params, aux).astype(np.float64)
-            # promoter_vals = np.linalg.solve(promoter_expr_jac, inhomog_val).flatten()
-            # G = 1.0 - np.sum(promoter_vals)
-            # promoter_vals = np.concatenate((np.array([G]), promoter_vals))
+            # if np.linalg.det(promoter_expr_jac @ promoter_expr_jac.T) > 1e-10 and np.all(np.isfinite(promoter_expr_jac)):
+            inhomog_val = inhomog_expr_func(y, params, aux).astype(np.float64)
+            promoter_vals = np.linalg.solve(promoter_expr_jac, -inhomog_val).flatten()
+            G = 1.0 - np.sum(promoter_vals)
+            promoter_vals = np.concatenate((np.array([G]), promoter_vals))
 
-            # TODO add variable to scale promoter vars
-            # gscale = 1.0
-            # promoter_vals = promoter_vals * gscale
+            # TODO add variable to scale promoter vars
+            gscale = 1.0
+            promoter_vals = promoter_vals * gscale
 
             res = rhs_func(y, params,
                            aux, promoter_vals).astype(np.float64).flatten()
@@ -184,8 +218,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         odes = sp.Matrix([odes])
 
         state_variables = self.get_state_variables()
-        param_names = sp.Matrix(list(transition_rates.keys()))
 
+        param_names = [x for p in transition_rates.keys() for x in sp.sympify(p).free_symbols]
         state_vars = super().get_state_variables()
         promoter_vars = [s for s in state_vars if s[0]=='G']
 

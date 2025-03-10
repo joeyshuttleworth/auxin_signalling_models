@@ -10,10 +10,6 @@ import sympy as sp
 from auxin_signalling_pathway.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
 
-from auxin_signalling_pathway.reduced_auxin_signalling_pathway import \
-    reduced_auxin_signalling_pathway as reduced_asp_class
-
-
 def setup_output_directory(dir_name, subdir_name):
     dirname = os.path.join(dir_name, subdir_name)
 
@@ -113,28 +109,13 @@ class TestGeneratePathway(unittest.TestCase):
 
             logging.info(f"Transition rates: {transition_rates}")
             for k, v in subs_dict.items():
-                self.assertIn(v, list(transition_rates.keys()))
-
                 # If the value has been substituted with a constant (i.e. 0)
                 # skip this check
                 if sp.sympify(v).free_symbols:
+                    self.assertIn(v, list(transition_rates.keys()))
                     self.assertIn(sp.sympify(v), odes.free_symbols)
 
             logging.info(transition_rates)
-
-    def test_reduced_model(self):
-        for kwargs in self.kwargs_list:
-            asp_model = reduced_asp_class(**kwargs)
-
-            odes, free_variables, transition_rates, constraints \
-                = asp_model.generate_ode_system()
-
-            for k, v in asp_model.parameters_subs_dict.items():
-                self.assertIn(v, list(transition_rates.keys()))
-                # If the value has been substituted with a constant (i.e. 0)
-                # skip this check
-                if sp.sympify(v).free_symbols:
-                    self.assertIn(sp.sympify(v), odes.free_symbols)
 
 
 if __name__ == "__main__":

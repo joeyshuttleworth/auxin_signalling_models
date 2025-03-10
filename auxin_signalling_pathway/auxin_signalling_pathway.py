@@ -272,7 +272,6 @@ class auxin_signalling_pathway():
         self.transition_rates[rate] = (default_value, description)
 
     def add_state(self, label, category=None, strict=True):
-
         label = str(label)
 
         if strict and label in self.graph.nodes():
@@ -399,7 +398,7 @@ class auxin_signalling_pathway():
                         category='enzymatic'
                     )
 
-    def _get_reaction_terms(self, reaction, variable, do_QSS_sub=True):
+    def _get_reaction_terms(self, reaction, variable):
         """Get a term for the ODE formulation of a model from a particular reaction
 
         This function is used to generate an ODE system describing the
@@ -424,19 +423,14 @@ class auxin_signalling_pathway():
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products:
-                terms += self._get_reaction_terms(reaction.reversed(), variable,
-                                                  do_QSS_sub=False)
+                terms += self._get_reaction_terms(reaction.reversed(), variable)
+
             fwd_rate = sp.sympify(
                 reaction.fwd_rates[0]) if reaction.fwd_rates else 0
             bwd_rate = sp.sympify(
                 reaction.bwd_rates[0]) if reaction.bwd_rates else 0
 
             if variable in reaction.reactants:
-                if variable in self.QSS_bound_species:
-                    if np.any([s in self.QSS_bound_species[variable]
-                               for s in list(reaction.products) + list(reaction.reactants)]):
-                        return terms
-
                 terms.append(-sp.prod([sp.sympify(reactant)
                                        for reactant in reaction.reactants])
                              * fwd_rate)
@@ -453,30 +447,7 @@ class auxin_signalling_pathway():
                              * fwd_rate,
                              sp.prod([sp.sympify(x) for x in reaction.enzymes])
                              * bwd_rate]
-
-            if not self.QSS_bound_species:
-                return terms
-
-            if variable in [s for v in self.QSS_bound_species.values() for s in v]:
-                return terms
-
-            return_terms = []
-            if do_QSS_sub:
-                for term in terms:
-                    free_symbols = set([str(s) for s in term.free_symbols])
-                    for s in [s for s in free_symbols if s
-                                in self.QSS_bound_species]:
-                        v = self.QSS_bound_species[s]
-                        if variable not in v:
-                            term = term.subs({
-                                s: sp.sympify(s)**2 / sum([sp.sympify(x)
-                                                            for x in [s] + list(v)])
-                            })
-                    return_terms.append(term)
-            else:
-                return_terms = terms
-
-            return return_terms
+            return terms
         else:
             raise NotImplementedError("")
 
@@ -505,18 +476,15 @@ class auxin_signalling_pathway():
 
         for reaction in self._reactions_set:
             for variable in reaction.reactants + reaction.products:
-                if variable == self.empty_set_node:
+                if str(variable) not in state_variables:
                     continue
-                if variable not in state_variables:
-                    continue
-
                 var_index = state_variables.index(variable)
-                odes[var_index] += sp.Add(*
-                                          self._get_reaction_terms(reaction,
-                                                                   variable))
+                new_terms = self._get_reaction_terms(reaction, variable)
+
+                odes[var_index] += sp.Add(*new_terms)
 
         sub_dict = {sp.sympify(self.empty_set_node): 1.0}
-        odes = sp.Matrix([[ode.subs(sub_dict) for ode in odes]]).T
+        odes = sp.Matrix([odes]).T.subs(sub_dict)
 
         # TODO include the fact that the promoter variables sum to 1
         constraints = []
@@ -525,6 +493,7 @@ class auxin_signalling_pathway():
             odes = odes.subs(parameter_subs_dict)
 
         transition_rates = self.transition_rates.copy()
+
         # Ensure that parameters actually appear in the model
         if parameter_subs_dict:
             transition_rates = {parameter_subs_dict[key]
@@ -549,7 +518,7 @@ class auxin_signalling_pathway():
                             if s != self.empty_set_node
                             and s != self.aux_symbol]))
 
-    def make_forward_solver(self, parameter_subs_dict={}):
+    def make_forward_solver(self, parameter_subs_dict=None):
         """Generate a function which simulates the model
 
         :returns: a function returning model output under different times,
@@ -560,10 +529,15 @@ class auxin_signalling_pathway():
         cfunc = self.make_cfunc_rhs(parameter_subs_dict=parameter_subs_dict)
         cfunc_ptr = cfunc.address
 
-        default_params_dict = self.get_default_parameters()
-        default_ic_dict = self.get_default_initial_conditions()
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict.copy()
 
         def solver(ts, params_dict, ic_dict, aux, strict=True):
+            default_params_dict = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
+            default_ic_dict = self.get_default_initial_conditions()
+
+            params_dict = _sorted_dict(params_dict)
+            ic_dict = _sorted_dict(ic_dict)
 
             if strict:
                 if keys := [k for k in default_params_dict if k not in params_dict]:
@@ -575,10 +549,15 @@ class auxin_signalling_pathway():
 
             for k in params_dict:
                 if k not in default_params_dict:
-                    raise ValueError(f"specified rate {k} not found in model")
+                    raise ValueError(f"specified rate {k} not found in model:"
+                    f" {default_params_dict.keys()}")
             for k in ic_dict:
                 if k not in default_ic_dict:
-                    raise ValueError(f"specified state {k} not found in model")
+                    raise ValueError(f"specified state {k} not found in model:"
+                                     f" {default_ic_dict.keys()}")
+
+            ic_dict = {k: ic_dict[k] for k in sorted(ic_dict.keys())}
+            params_dict = {k: params_dict[k] for k in sorted(params_dict.keys())}
 
             params = np.array([
                 params_dict[key] if key in params_dict
@@ -679,7 +658,7 @@ class auxin_signalling_pathway():
         else:
             return self.generate_jacobian_func()
 
-    def generate_rhs_func(self, njitted=True, parameter_subs_dict={}):
+    def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
             _ = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
 
@@ -689,9 +668,9 @@ class auxin_signalling_pathway():
         ic_dict = self.get_default_initial_conditions()
 
         state_variables = sp.Matrix([s for s in ic_dict])
-        params_dict = self.get_default_parameters()
 
-        param_names = sp.Matrix(list(transition_rates.keys()))
+        param_names = [x for p in transition_rates.keys() for x in sp.sympify(p).free_symbols]
+
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)
@@ -715,12 +694,16 @@ class auxin_signalling_pathway():
         """
 
         state_vars = self.get_state_variables()
-        ic_dict = {str(s): .0 for s in state_vars if s != self.empty_set_node
+        ic_dict = {str(s): 0.1 for s in state_vars if s != self.empty_set_node
                    and s != self.aux_symbol}
+
+        promoter_vars = [s for s in ic_dict if s[0] == 'G']
+        for v in promoter_vars:
+            ic_dict[v] = 0.0
         ic_dict['G'] = 1.0
 
         for arf in self.arf_symbols:
-            ic_dict[arf] = 0
+            ic_dict[arf] = 1.0
 
         ic_dict = {key: ic_dict[key] for key in sorted(ic_dict.keys())}
 
@@ -736,7 +719,7 @@ class auxin_signalling_pathway():
             parameter_subs_dict = self.parameter_subs_dict
 
         param_dict = {parameter_subs_dict[k] if k in parameter_subs_dict
-                      and sp.sympify(parameter_subs_dict[k]).free_symbols == 1
+                      and len(sp.sympify(parameter_subs_dict[k]).free_symbols) == 1
                       else k:
                       v[0]
                       for k, v in self.transition_rates.items()}
@@ -803,6 +786,26 @@ class auxin_signalling_pathway():
             network.from_nx(graph)
             network.show(output_path, notebook=False)
 
+    def output_latex(self):
+        odes, free_variables, transition_rates, \
+            constraints = self.generate_ode_system()
+
+        return sp.latex(odes)
+
+
     def remove_state(self, state):
-        # TODO Allow removal of states
-        raise NotImplementedError("Not yet implemented")
+        self.graph.remove_node(state)
+
+        reaction_set_list =  []
+        for reaction in self._reactions_set:
+            if state not  in list(reaction.products) + list(reaction.reactants) \
+               + list(reaction.enzymes):
+                reaction_set_list.append(reaction)
+
+        self._reactions_set = set(reaction_set_list)
+
+
+def _sorted_dict(_dict):
+    # Insertion order is respected (?)
+    ret_dict = {k: _dict[k] for k in sorted(_dict)}
+    return ret_dict
