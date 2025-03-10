@@ -423,7 +423,8 @@ class auxin_signalling_pathway():
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products:
-                terms += self._get_reaction_terms(reaction.reversed(), variable)
+                terms += self._get_reaction_terms(
+                    reaction.reversed(), variable)
 
             fwd_rate = sp.sympify(
                 reaction.fwd_rates[0]) if reaction.fwd_rates else 0
@@ -533,7 +534,8 @@ class auxin_signalling_pathway():
             parameter_subs_dict = self.parameter_subs_dict.copy()
 
         def solver(ts, params_dict, ic_dict, aux, strict=True):
-            default_params_dict = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
+            default_params_dict = self.get_default_parameters(
+                parameter_subs_dict=parameter_subs_dict)
             default_ic_dict = self.get_default_initial_conditions()
 
             params_dict = _sorted_dict(params_dict)
@@ -550,14 +552,15 @@ class auxin_signalling_pathway():
             for k in params_dict:
                 if k not in default_params_dict:
                     raise ValueError(f"specified rate {k} not found in model:"
-                    f" {default_params_dict.keys()}")
+                                     f" {default_params_dict.keys()}")
             for k in ic_dict:
                 if k not in default_ic_dict:
                     raise ValueError(f"specified state {k} not found in model:"
                                      f" {default_ic_dict.keys()}")
 
             ic_dict = {k: ic_dict[k] for k in sorted(ic_dict.keys())}
-            params_dict = {k: params_dict[k] for k in sorted(params_dict.keys())}
+            params_dict = {k: params_dict[k]
+                           for k in sorted(params_dict.keys())}
 
             params = np.array([
                 params_dict[key] if key in params_dict
@@ -631,6 +634,8 @@ class auxin_signalling_pathway():
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
+        jacobian = odes.jacobian(self.get_state_variables())
+
         ic_dict = self.get_default_initial_conditions()
 
         state_variables = sp.Matrix([s for s in ic_dict])
@@ -660,7 +665,8 @@ class auxin_signalling_pathway():
 
     def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
-            _ = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
+            _ = self.generate_ode_system(
+                parameter_subs_dict=parameter_subs_dict)
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
@@ -669,13 +675,15 @@ class auxin_signalling_pathway():
 
         state_variables = sp.Matrix([s for s in ic_dict])
 
-        param_names = [x for p in transition_rates.keys() for x in sp.sympify(p).free_symbols]
+        param_names = [x for p in transition_rates.keys()
+                       for x in sp.sympify(p).free_symbols]
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)
 
-        params = np.array([x[0] for x in transition_rates.values()]).astype(np.float64)
+        params = np.array(
+            [x[0] for x in transition_rates.values()]).astype(np.float64)
         ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
         rhs_func(ic, params, np.array([.99]))
 
@@ -792,13 +800,12 @@ class auxin_signalling_pathway():
 
         return sp.latex(odes)
 
-
     def remove_state(self, state):
         self.graph.remove_node(state)
 
-        reaction_set_list =  []
+        reaction_set_list = []
         for reaction in self._reactions_set:
-            if state not  in list(reaction.products) + list(reaction.reactants) \
+            if state not in list(reaction.products) + list(reaction.reactants) \
                + list(reaction.enzymes):
                 reaction_set_list.append(reaction)
 
@@ -806,6 +813,6 @@ class auxin_signalling_pathway():
 
 
 def _sorted_dict(_dict):
-    # Insertion order is respected (?)
+    #  Insertion order is respected (?)
     ret_dict = {k: _dict[k] for k in sorted(_dict)}
     return ret_dict

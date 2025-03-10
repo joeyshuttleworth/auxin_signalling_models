@@ -10,6 +10,7 @@ import sympy as sp
 from auxin_signalling_pathway.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
 
+
 def setup_output_directory(dir_name, subdir_name):
     dirname = os.path.join(dir_name, subdir_name)
 

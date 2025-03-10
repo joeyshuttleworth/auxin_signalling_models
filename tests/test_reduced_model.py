@@ -3,13 +3,11 @@ import os
 import unittest
 
 import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
-import sympy as sp
 
+from auxin_signalling_pathway import auxin_signalling_pathway as asp_class
 from auxin_signalling_pathway.reduced_auxin_signalling_pathway import \
     reduced_auxin_signalling_pathway as reduced_asp_class
-from auxin_signalling_pathway import auxin_signalling_pathway as asp_class
 
 
 def setup_output_directory(dir_name, subdir_name):
@@ -97,7 +95,8 @@ class TestReducedModel(unittest.TestCase):
             param_dict = asp_model_r.get_default_parameters()
 
             solver_r = asp_model_r.make_forward_solver()
-            solver_full = asp_model_full.make_forward_solver(parameter_subs_dict=parameter_subs_dict)
+            solver_full = asp_model_full.make_forward_solver(
+                parameter_subs_dict=parameter_subs_dict)
 
             ts = np.linspace(0, 100, 250)
             res, succ = solver_r(ts, param_dict, reduced_ic_dict, 1.0)
