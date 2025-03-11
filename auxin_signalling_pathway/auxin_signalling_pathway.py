@@ -130,7 +130,11 @@ class auxin_signalling_pathway():
             if promoter == 'G':
                 continue
 
-            reactants = sorted(promoter.split('__')[1:])
+            # TODO clean up this code
+            reactant = promoter[3:]
+            if '__' in reactant:
+                reactant = f"D__{reactant}"
+
 
             promoter_binding_rate = f"k__{promoter}"
             promoter_unbinding_rate = f"d__{promoter}"
@@ -143,14 +147,11 @@ class auxin_signalling_pathway():
                                      "dissociation rate for promoter"
                                      f"{promoter}")
 
-            if len(reactants) == 2:
-                reactants = [f"D__{reactants[0]}__{reactants[1]}"]
-            elif len(reactants) > 3:
-                raise NotImplementedError()
-
             self.add_reaction(
-                reactants + [sp.sympify('G')], [promoter],
-                [promoter_binding_rate], [promoter_unbinding_rate])
+                [sp.sympify('G')], [promoter],
+                [promoter_binding_rate], [promoter_unbinding_rate],
+                enzymes=[reactant]
+            )
 
         for promoter in self.promoter_symbols:
             for rna_symbol in rna_symbols:
@@ -186,8 +187,9 @@ class auxin_signalling_pathway():
                         self.add_transition_rate(promoter_binding_rate)
                         self.add_transition_rate(promoter_unbinding_rate)
                         self.add_reaction(
-                            [reactants[1]] + [partially_bound_promoter], [promoter],
-                            [promoter_binding_rate], [promoter_unbinding_rate])
+                            [partially_bound_promoter], [promoter],
+                            [promoter_binding_rate], [promoter_unbinding_rate],
+                            enzymes=[reactants[1]])
 
                 partially_bound_promoter = f"G__{reactants[1]}"
                 if partially_bound_promoter in self.promoter_symbols:
@@ -198,8 +200,9 @@ class auxin_signalling_pathway():
                         self.add_transition_rate(promoter_binding_rate)
                         self.add_transition_rate(promoter_unbinding_rate)
                         self.add_reaction(
-                            [reactants[0]] + [partially_bound_promoter], [promoter],
-                            [promoter_binding_rate], [promoter_unbinding_rate])
+                            [partially_bound_promoter], [promoter],
+                            [promoter_binding_rate], [promoter_unbinding_rate],
+                            enzymes=[reactants[0]])
 
         # Assume constant decay rate for all mRNA
         rna_decay_rate = sp.sympify('d__R')
@@ -343,7 +346,7 @@ class auxin_signalling_pathway():
         elif strict:
             for state in set(reactants + products + enzymes):
                 if state not in self.graph.nodes:
-                    raise Exception(f"Tried to add reaction with state {state}"
+                    raise Exception(f"Tried to add reaction with state {state} "
                                     f"but {state} does not exist in the model"
                                     "(strict=True)")
 
