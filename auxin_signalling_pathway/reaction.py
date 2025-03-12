@@ -10,8 +10,6 @@ class Reaction:
 
      - linear: using the law of mass action (simple production and linear decay
      are possible by using the empty-set node as either a reactant or product)
-     -tf-hill-act: a hill function that acts to promote transcription
-     -tf-hill-repr: a hill function that acts to repress transcripton
 
     """
 
