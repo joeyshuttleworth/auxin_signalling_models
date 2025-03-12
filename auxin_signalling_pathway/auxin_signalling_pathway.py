@@ -47,8 +47,8 @@ class auxin_signalling_pathway():
         self.transition_rates = {}
 
         self.promoter_symbols = ["G"] + [f"G__{arf}__{arf1}"
-                                         for arf in arf_symbols
-                                         for arf1 in arf_symbols]\
+                                         for arf1 in arf_symbols
+                                         for arf2 in arf_symbols if arf1 >= arf2]\
             + [f"G__{arf}" for arf in arf_symbols]\
             + [f"G__{arf}__{iaa}" for arf in arf_symbols
                for iaa in iaa_symbols]
@@ -103,7 +103,6 @@ class auxin_signalling_pathway():
                 iaa_production], bwd_rates=[iaa_decay])
 
         for d in dimer_symbols:
-            # TODO define parameter labels
             association_rate = sp.sympify(f"k__{d}")
             dissociation_rate = sp.sympify(f"d__{d}")
 
@@ -115,8 +114,8 @@ class auxin_signalling_pathway():
                                      f"Dissociation rate of dimer {d}")
 
             reactants = str(d).split('__')[1:]
-            self.add_reaction(reactants, [d], [association_rate], [
-                dissociation_rate])
+            self.add_reaction(reactants, [d], [association_rate],
+                              [dissociation_rate])
 
         for iaa in iaa_symbols:
             iaa_decay_rate = f"d__{iaa}_{self.aux_symbol}"
@@ -134,7 +133,6 @@ class auxin_signalling_pathway():
             reactant = promoter[3:]
             if '__' in reactant:
                 reactant = f"D__{reactant}"
-
 
             promoter_binding_rate = f"k__{promoter}"
             promoter_unbinding_rate = f"d__{promoter}"
@@ -496,7 +494,7 @@ class auxin_signalling_pathway():
         if parameter_subs_dict:
             odes = odes.subs(parameter_subs_dict)
 
-        transition_rates = self.transition_rates.copy()
+        transition_rates = _sorted_dict(self.transition_rates.copy())
 
         # Ensure that parameters actually appear in the model
         if parameter_subs_dict:
@@ -575,6 +573,7 @@ class auxin_signalling_pathway():
                 ic_dict[key] if key in ic_dict else default_ic_dict[key]
                 for key in default_ic_dict
             ])
+
             ts = np.array(ts)
 
             data = np.full(len(params) + 1, np.nan)
@@ -716,7 +715,7 @@ class auxin_signalling_pathway():
         for arf in self.arf_symbols:
             ic_dict[arf] = 1.0
 
-        ic_dict = {key: ic_dict[key] for key in sorted(ic_dict.keys())}
+        ic_dict = _sorted_dict(ic_dict)
 
         return ic_dict
 
@@ -736,7 +735,7 @@ class auxin_signalling_pathway():
                       for k, v in self.transition_rates.items()}
 
         # sort parameters
-        param_dict = {key: param_dict[key] for key in sorted(list(param_dict))}
+        param_dict = _sorted_dict(param_dict)
 
         return param_dict
 
