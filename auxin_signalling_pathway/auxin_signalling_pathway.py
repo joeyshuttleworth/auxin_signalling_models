@@ -1,4 +1,5 @@
 import logging
+import string
 
 import networkx as nx
 import numba as nb
@@ -8,6 +9,8 @@ import sympy as sp
 from numba import cfunc, njit
 from numbalsoda import lsoda, lsoda_sig
 from pyvis.network import Network
+
+from sympy.printing.julia import julia_code
 
 from .reaction import Reaction
 
@@ -46,12 +49,13 @@ class auxin_signalling_pathway():
         # Dictionary defining each transition rate
         self.transition_rates = {}
 
-        self.promoter_symbols = ["G"] + [f"G__{arf}__{arf1}"
+        self.promoter_symbols = ["G"] + [f"G__{arf1}__{arf2}"
                                          for arf1 in arf_symbols
-                                         for arf2 in arf_symbols if arf1 >= arf2]\
+                                         for arf2 in arf_symbols if arf2 >= arf1]\
             + [f"G__{arf}" for arf in arf_symbols]\
             + [f"G__{arf}__{iaa}" for arf in arf_symbols
                for iaa in iaa_symbols]
+        self.promoter_symbols = list(set(self.promoter_symbols))
 
         for promoter in self.promoter_symbols:
             self.add_state(promoter, category='promoter')
@@ -796,11 +800,41 @@ class auxin_signalling_pathway():
             network.from_nx(graph)
             network.show(output_path, notebook=False)
 
-    def output_latex(self):
+    def output_latex(self, **kwargs):
         odes, free_variables, transition_rates, \
-            constraints = self.generate_ode_system()
+            constraints = self.generate_ode_system(**kwargs)
 
+        symbols = list(odes.free_symbols)
+
+        subs_dict = {}
+
+        letters = ['U', 'V', 'W', 'X', 'Y', 'Z',]
+        for arf, l in zip(self.arf_symbols, letters):
+            subs_dict[arf] = l
+
+        letters = ['u', 'v', 'w', 'x', 'y', 'z',]
+        for arf, l in zip(self.arf_symbols, letters):
+            subs_dict[arf] = l
+
+        for i, promoter in enumerate(self.promoter_symbols[1:]):
+            subs_dict[promoter] = r"G_" + str(i + 1)
+
+        for i, p in enumerate(transition_rates.keys()):
+            subs_dict[p] = f"p_{i}"
+
+        print(subs_dict)
+
+        odes = odes.subs(subs_dict)
         return sp.latex(odes)
+
+    def output_julia(self):
+        odes, free_variables, transition_rates, \
+            constraint = self.generate_ode_system()
+        expr = str(julia_code(odes))
+        return expr
+
+    def get_jacobian_expr(self):
+        raise NotImplementedException("")
 
     def remove_state(self, state):
         self.graph.remove_node(state)

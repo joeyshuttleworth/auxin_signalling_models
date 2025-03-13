@@ -114,6 +114,23 @@ class TestReducedModel(unittest.TestCase):
             with open(os.path.join(self.output_dir, f"reduced_model_{i}.tex"), 'w') as fout:
                 fout.write(latex_out)
 
+    def test_output_julia(self):
+        for i, kwargs in enumerate(self.kwargs_list[:1]):
+            asp_model_r = reduced_asp_class(**kwargs)
+
+            jl_out = asp_model_r.output_julia()
+
+            with open(os.path.join(self.output_dir, f"reduced_model_{i}.jl"), 'w') as fout:
+                fout.write(jl_out)
+
+    def test_get_jacobian(self):
+        for i, kwargs in enumerate(self.kwargs_list[:1]):
+            asp_model_r = reduced_asp_class(**kwargs)
+            jac = asp_model_r.get_jacobian_expr()
+            print(f"jacobian for model {i}:")
+            print(jac)
+
+        self.assertTrue(True)
 
 if __name__ == "__main__":
     # logging.getLogger().setLevel(logging.INFO)

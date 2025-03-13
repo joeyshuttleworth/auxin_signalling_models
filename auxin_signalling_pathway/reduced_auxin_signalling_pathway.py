@@ -4,6 +4,8 @@ import sympy as sp
 from numba import cfunc, njit
 from numbalsoda import lsoda_sig
 
+from sympy.printing.julia import julia_code
+
 from auxin_signalling_pathway import auxin_signalling_pathway
 
 
@@ -32,6 +34,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             for iaa_symbol in self.iaa_symbols:
                 for rna_symbol in self.rna_symbols:
                     subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = f"0.0"
+                    subs_dict[f"k__G__{rna_symbol}"] = f"0.0"
 
         self.parameter_subs_dict = subs_dict
 
@@ -88,6 +91,11 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                 constraints = list(constraints) + [promoter_odes]
             else:
                 constraints = [promoter_odes]
+
+        transition_rates = {
+            k: v for k, v in transition_rates.items()
+            if k in list(odes.free_symbols) + [s for c in constraints for s in c.free_symbols]
+        }
 
         return odes, free_variables, transition_rates, constraints
 
@@ -183,6 +191,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return cfunc_rhs
 
+    def output_latex(self, **kwargs):
+        return super().output_latex(reduced=True, **kwargs)
 
     def get_promoter_ode_funcs(self, parameter_subs_dict=None):
         odes, free_variables, transition_rates, constraints = \
@@ -190,10 +200,10 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                                      parameter_subs_dict=parameter_subs_dict)
 
         #  Assume the promoter expression is the only constraint
-        promoter_exprs = constraints[0]
 
         promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
 
+        promoter_exprs = constraints[0]
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
                                                           for s in promoter_vars[1:]])})
@@ -215,6 +225,29 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         inhomog_expr_func = njit(sp.lambdify(promoter_inputs, promoter_expr_inhomog))
         return promoter_expr_jac_func, inhomog_expr_func
+
+    def get_promoter_expr(self, parameter_subs_dict=None):
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict
+
+        odes, free_variables, transition_rates, constraints = \
+            self.generate_ode_system(reduced=True,
+                                     parameter_subs_dict=parameter_subs_dict)
+
+        promoter_vars = [s for s in super().get_state_variables() if s[0] == 'G']
+        promoter_exprs = constraints[0]
+        promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
+        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
+                                                          for s in promoter_vars[1:]])})
+
+        promoter_expr_jac = sp.simplify(
+            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T))
+
+        promoter_expr_inhomog = sp.simplify(promoter_expr - promoter_expr_jac
+                                            @ sp.Matrix([promoter_vars[1:]]).T)
+
+        promoter_expr = -promoter_expr_jac.solve(promoter_expr_inhomog)
+        return promoter_expr
 
 
     def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
@@ -246,27 +279,52 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                          reduced=True)
 
-        state_vars = self.get_state_variables()
-        promoter_vars = sp.Matrix([[sp.sympify(s) for s in state_vars if s[0] == 'G']]).T[1:, :]
+        promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
 
-        promoter_ode_expr = sp.Matrix(constraints[-1][1:, :])
+        promoter_exprs = constraints[0]
+        promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
+        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
+                                                          for s in promoter_vars[1:]])})
 
-        promoter_ode_expr = promoter_ode_expr.subs({'G': 1 - sum(promoter_vars)})
-        promoter_expr_jac = sp.simplify(promoter_ode_expr.jacobian(promoter_vars))
-        print(promoter_expr_jac)
+        promoter_expr_jac = sp.simplify(
+            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T))
 
-        promoter_expr_inhomog = sp.simplify(promoter_ode_expr - promoter_expr_jac
+        promoter_expr_inhomog = sp.simplify(promoter_expr - promoter_expr_jac
                                             @ sp.Matrix([promoter_vars[1:]]).T)
 
-        promoter_ss_expr = promoter_expr_jac.solve(promoter_expr_inhomog)
+        state_vars = self.get_state_variables()
 
+        promoter_ss_expr = sp.sympify(promoter_expr_jac.solve(promoter_expr_inhomog))
         promoter_ss_jac = sp.simplify(promoter_ss_expr.jacobian(state_vars))
 
-        jac =  odes.jacobian(self.get_state_variables()) \
-            + odes.jacobian(sp.Matrix(promoter_vars)) @ promoter_ss_jac
+        jac =  sp.simplify(odes.jacobian(self.get_state_variables()) \
+            + odes.jacobian(sp.Matrix(promoter_vars[1:])) @ promoter_ss_jac)
 
         return jac
 
 
+    def output_julia(self):
+        odes, free_variables, transition_rates, \
+            constraints = self.generate_ode_system()
+
+        state_vars = self.get_state_variables()
+        promoter_vars = [s for s in super().get_state_variables() if s[0]=='G']
+
+        expr = "[" + ", ".join(state_vars) + "] = x\n\n"
+        expr += "[" + ", ".join(transition_rates.keys()) + "] = p\n\n"
+        expr += "[" + ", ".join(promoter_vars) + "] = " + \
+            str(julia_code(self.get_promoter_expr())) + "\n\n"
+
+        expr += "return " + str(julia_code(odes))
+
+        return expr
+
     def generate_jacobian_func(self, njitted=False):
-        raise NotImplementedError("")
+        jac_expr = self.get_jacobian_expr
+
+        jac_func = sp.lambdify(inputs, jac_expr)
+
+        if njitted:
+            njit(jac_func)
+
+        return jac_func
