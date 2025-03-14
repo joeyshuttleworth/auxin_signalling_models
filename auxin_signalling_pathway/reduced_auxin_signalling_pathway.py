@@ -94,7 +94,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         transition_rates = {
             k: v for k, v in transition_rates.items()
-            if k in list(odes.free_symbols) + [s for c in constraints for s in c.free_symbols]
+            if sp.sympify(k) in list(odes.free_symbols) +
+            [s for c in constraints for s in c.free_symbols]
         }
 
         return odes, free_variables, transition_rates, constraints
@@ -215,11 +216,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                                             @ sp.Matrix([promoter_vars[1:]]).T)
 
         parameter_vars = list(transition_rates.keys())
-
         state_vars = self.get_state_variables()
 
-        promoter_inputs = (state_vars, [x for p in parameter_vars for x in
-                                        sp.sympify(p).free_symbols], free_variables)
+        promoter_inputs = (state_vars, parameter_vars, free_variables)
         promoter_expr_jac_func = njit(sp.lambdify(promoter_inputs,
                                                    promoter_expr_jac))
 
@@ -260,12 +259,15 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         state_variables = self.get_state_variables()
 
-        param_names = [x for p in transition_rates.keys()
-                       for x in sp.sympify(p).free_symbols]
+        param_names = list(transition_rates.keys())
+
         state_vars = super().get_state_variables()
         promoter_vars = [s for s in state_vars if s[0] == 'G']
 
-        free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
+        for s in odes.free_symbols:
+            input_symbols = param_names + state_variables + promoter_vars + free_variables
+            if str(s) not in input_symbols:
+                raise ValueError(f"symbol {s} not found in {input_symbols}")
 
         _rhs_func = sp.lambdify((state_variables, param_names,
                                  free_variables, promoter_vars), odes)

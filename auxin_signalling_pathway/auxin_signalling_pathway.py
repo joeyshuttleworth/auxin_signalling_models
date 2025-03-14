@@ -498,18 +498,7 @@ class auxin_signalling_pathway():
         if parameter_subs_dict:
             odes = odes.subs(parameter_subs_dict)
 
-        transition_rates = _sorted_dict(self.transition_rates.copy())
-
-        # Ensure that parameters actually appear in the model
-        if parameter_subs_dict:
-            transition_rates = {parameter_subs_dict[key]
-                                if key in parameter_subs_dict
-                                and len(sp.sympify(parameter_subs_dict[key]).free_symbols) == 1
-                                else key:
-                                (value[0], "")
-                                for key, value in transition_rates.items()
-                                }
-
+        transition_rates = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
         return odes, free_variables, transition_rates, constraints
 
     def get_state_variables(self):
@@ -688,8 +677,7 @@ class auxin_signalling_pathway():
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)
 
-        params = np.array(
-            [x[0] for x in transition_rates.values()]).astype(np.float64)
+        params = np.array(list(transition_rates.values())).astype(np.float64)
         ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
         rhs_func(ic, params, np.array([.99]))
 
