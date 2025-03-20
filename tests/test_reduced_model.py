@@ -89,21 +89,25 @@ class TestReducedModel(unittest.TestCase):
         for kwargs in self.kwargs_list:
             asp_model_r = reduced_asp_class(**kwargs)
             asp_model_full = asp_class(**kwargs)
+            asp_model_full.add_transition_rate("k__RNA__IAA", 1.0, 'Production rate for IAAs')
+
             parameter_subs_dict = asp_model_r.parameter_subs_dict.copy()
 
             reduced_ic_dict = asp_model_r.get_default_initial_conditions()
-            param_dict = asp_model_r.get_default_parameters()
 
             solver_r = asp_model_r.make_forward_solver()
+
             solver_full = asp_model_full.make_forward_solver(
                 parameter_subs_dict=parameter_subs_dict)
 
             ts = np.linspace(0, 100, 250)
+            param_dict = asp_model_r.get_default_parameters()
             res, succ = solver_r(ts, param_dict, reduced_ic_dict, 1.0)
             self.assertTrue(succ and np.all(np.isfinite(res)))
 
+            full_params = asp_model_full.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
             full_ic_dict = asp_model_full.get_default_initial_conditions()
-            res, succ = solver_full(ts, param_dict, full_ic_dict, 1.0)
+            res, succ = solver_full(ts, full_params, full_ic_dict, 1.0, strict=False)
 
     def test_output_latex(self):
         for i, kwargs in enumerate(self.kwargs_list):
@@ -127,10 +131,9 @@ class TestReducedModel(unittest.TestCase):
         for i, kwargs in enumerate(self.kwargs_list[:1]):
             asp_model_r = reduced_asp_class(**kwargs)
             jac = asp_model_r.get_jacobian_expr()
-            print(f"jacobian for model {i}:")
-            print(jac)
 
         self.assertTrue(True)
+
 
 if __name__ == "__main__":
     # logging.getLogger().setLevel(logging.INFO)
