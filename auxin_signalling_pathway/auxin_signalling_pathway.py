@@ -1,5 +1,4 @@
 import logging
-import string
 
 import networkx as nx
 import numba as nb
@@ -9,7 +8,6 @@ import sympy as sp
 from numba import cfunc, njit
 from numbalsoda import lsoda, lsoda_sig
 from pyvis.network import Network
-
 from sympy.printing.julia import julia_code
 
 from .reaction import Reaction
@@ -133,7 +131,7 @@ class auxin_signalling_pathway():
             if promoter == 'G':
                 continue
 
-            # TODO clean up this code
+            # TODO clean up this code
             reactant = promoter[3:]
             if '__' in reactant:
                 reactant = f"D__{reactant}"
@@ -164,7 +162,7 @@ class auxin_signalling_pathway():
                                          f"Rate of transcription "
                                          f"for {rna_symbol} for promoter "
                                          f"{promoter}"
-                                         )
+                )
 
                 self.add_reaction(
                     [], [rna_symbol], [rate],
@@ -208,13 +206,13 @@ class auxin_signalling_pathway():
 
         # Assume constant decay rate for all mRNA
         rna_decay_rate = sp.sympify('d__R')
-        rna_production_rate = sp.sympify('k__R')
+        # rna_production_rate = sp.sympify('k__R')
         self.add_transition_rate(rna_decay_rate,
-                                 1.0 / 240,
-                                 "RNA decay rate")
-        self.add_transition_rate(rna_production_rate,
                                  0.01,
-                                 "base RNA production rate")
+                                 "RNA decay rate")
+        # self.add_transition_rate(rna_production_rate,
+        #                          1e-5,
+        #                          "base RNA production rate")
 
         for rna_symbol in rna_symbols:
             self.add_reaction([self.empty_set_node], [
@@ -253,13 +251,6 @@ class auxin_signalling_pathway():
         self.cfunc_rhs = None
 
         self.jac_func = None
-
-    def get_rhs_func(self, **kwargs):
-        if self.rhs_func is None and not kwargs:
-            self.rhs_func = self.generate_rhs_func()
-        elif kwargs:
-            return self.generate_rhs_func(**kwargs)
-        return self.rhs_func
 
     def add_transition_rate(self, rate, default_value=0.0,
                             description="", strict=True):
@@ -484,6 +475,7 @@ class auxin_signalling_pathway():
             for variable in reaction.reactants + reaction.products:
                 if str(variable) not in state_variables:
                     continue
+
                 var_index = state_variables.index(variable)
                 new_terms = self._get_reaction_terms(reaction, variable)
 
@@ -499,6 +491,7 @@ class auxin_signalling_pathway():
             odes = odes.subs(parameter_subs_dict)
 
         transition_rates = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
+
         return odes, free_variables, transition_rates, constraints
 
     def get_state_variables(self):
@@ -552,10 +545,6 @@ class auxin_signalling_pathway():
                     raise ValueError(f"specified state {k} not found in model:"
                                      f" {default_ic_dict.keys()}")
 
-            ic_dict = {k: ic_dict[k] for k in sorted(ic_dict.keys())}
-            params_dict = {k: params_dict[k]
-                           for k in sorted(params_dict.keys())}
-
             params = np.array([
                 params_dict[key] if key in params_dict
                 else default_params_dict[key]
@@ -571,10 +560,11 @@ class auxin_signalling_pathway():
 
             data = np.full(len(params) + 1, np.nan)
             data[0] = aux
-            data[1:] = params.copy()
-            return lsoda(cfunc_ptr, ic.copy(),
+            data[1:] = params.copy().flatten()
+
+            return lsoda(cfunc_ptr, ic.copy().astype(np.float64),
                          np.array(ts),
-                         data=data.copy())
+                         data=data.astype(np.float64))
 
         return solver
 
@@ -586,7 +576,7 @@ class auxin_signalling_pathway():
 
         return self.cfunc_rhs
 
-    def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict={}):
+    def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict=None):
         """Generate a c function which evaluates the RHS of the ODE system
 
         :returns: a c function with signature lsoda_sig for use solving our ODE
@@ -597,13 +587,14 @@ class auxin_signalling_pathway():
         n_y = len(self.get_state_variables())
 
         # Number of params + 'free variables' i.e. auxin
-        n_data = len(self.get_default_parameters()) + 1
+        n_data = len(self.get_default_parameters(parameter_subs_dict=parameter_subs_dict))\
+            + 1
         rhs_func = self.generate_rhs_func(parameter_subs_dict=parameter_subs_dict,
                                           njitted=True)
 
         @cfunc(lsoda_sig)
         def cfunc_rhs(t, y, dy, data):
-            y = nb.carray(y, n_y)
+            y = nb.carray(y, n_y).astype(np.float64)
             dy = nb.carray(dy, n_y)
             data = nb.carray(data, n_data)
 
@@ -615,7 +606,8 @@ class auxin_signalling_pathway():
                 aux = data[0:1]
 
             res = rhs_func(y, params,
-                           aux).astype(np.float64).flatten()
+                           aux).astype(np.float64).flatten().flatten()
+
             assert (res.shape == y.shape)
             dy[:] = res[:]
             return
@@ -670,16 +662,13 @@ class auxin_signalling_pathway():
 
         state_variables = sp.Matrix([s for s in ic_dict])
 
-        param_names = [x for p in transition_rates.keys()
-                       for x in sp.sympify(p).free_symbols]
+        default_parameters = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
+        param_names = [sp.sympify(p) for p in default_parameters.keys()]
 
+        print(param_names)
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)
-
-        params = np.array(list(transition_rates.values())).astype(np.float64)
-        ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
-        rhs_func(ic, params, np.array([.99]))
 
         if njitted:
             rhs_func = njit(rhs_func)
@@ -718,7 +707,7 @@ class auxin_signalling_pathway():
         """
 
         if parameter_subs_dict is None:
-            parameter_subs_dict = self.parameter_subs_dict
+            parameter_subs_dict = self.parameter_subs_dict.copy()
 
         param_dict = {parameter_subs_dict[k] if k in parameter_subs_dict
                       and len(sp.sympify(parameter_subs_dict[k]).free_symbols) == 1
@@ -792,8 +781,6 @@ class auxin_signalling_pathway():
         odes, free_variables, transition_rates, \
             constraints = self.generate_ode_system(**kwargs)
 
-        symbols = list(odes.free_symbols)
-
         subs_dict = {}
 
         letters = ['U', 'V', 'W', 'X', 'Y', 'Z',]
@@ -801,16 +788,19 @@ class auxin_signalling_pathway():
             subs_dict[arf] = l
 
         letters = ['u', 'v', 'w', 'x', 'y', 'z',]
-        for arf, l in zip(self.arf_symbols, letters):
-            subs_dict[arf] = l
+        for iaa, l in zip(self.iaa_symbols, letters):
+            subs_dict[iaa] = l
+
+        for d in self.dimer_symbols:
+            components = d.split('__')[1:]
+            letter1, letter2 = [subs_dict[c] for c in components]
+            subs_dict[d] = f'D_{letter1}_{letter2}'
 
         for i, promoter in enumerate(self.promoter_symbols[1:]):
             subs_dict[promoter] = r"G_" + str(i + 1)
 
         for i, p in enumerate(transition_rates.keys()):
             subs_dict[p] = f"p_{i}"
-
-        print(subs_dict)
 
         odes = odes.subs(subs_dict)
         return sp.latex(odes)
@@ -822,7 +812,14 @@ class auxin_signalling_pathway():
         return expr
 
     def get_jacobian_expr(self):
-        raise NotImplementedException("")
+        raise NotImplementedError()
+
+    def remove_transition_rate(self, rate):
+        if rate in self.parameter_subs_dict:
+            self.parameter_subs_dict.pop(rate)
+
+        if rate in self.transition_rates:
+            self.transition_rates.pop(rate)
 
     def remove_state(self, state):
         self.graph.remove_node(state)
