@@ -162,7 +162,7 @@ class auxin_signalling_pathway():
                                          f"Rate of transcription "
                                          f"for {rna_symbol} for promoter "
                                          f"{promoter}"
-                )
+                                         )
 
                 self.add_reaction(
                     [], [rna_symbol], [rate],
