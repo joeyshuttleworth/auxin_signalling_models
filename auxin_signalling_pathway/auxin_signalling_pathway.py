@@ -665,7 +665,6 @@ class auxin_signalling_pathway():
         default_parameters = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
         param_names = [sp.sympify(p) for p in default_parameters.keys()]
 
-        print(param_names)
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)

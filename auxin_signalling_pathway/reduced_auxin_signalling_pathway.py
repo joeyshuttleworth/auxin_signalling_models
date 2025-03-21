@@ -26,7 +26,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
             self.remove_transition_rate(f"k__{rna_symbol}__{iaa_symbol}")
 
-        self.add_transition_rate("k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
+        self.add_transition_rate(
+            "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
 
         for key in self.transition_rates:
             if "bind" in key:
@@ -36,7 +37,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             for iaa_symbol in self.iaa_symbols:
                 for rna_symbol in self.rna_symbols:
                     subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = "0.0"
-                    self.remove_transition_rate(f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}")
+                    self.remove_transition_rate(
+                        f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}")
 
                     subs_dict[f"k__G__{rna_symbol}"] = "0.0"
                     self.remove_transition_rate(f"k__G__{rna_symbol}")
@@ -98,7 +100,6 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                 constraints = [promoter_odes]
 
         return odes, free_variables, transition_rates, constraints
-
 
     def get_default_initial_conditions(self):
         all_ic = super().get_default_initial_conditions()
@@ -168,7 +169,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             promoter_vals = np.full(n_promoter_vars, 0.0)
 
             # steady state doesn't depend on promoter states provided conservation
-            promoter_expr_jac = promoter_expr_jac_func(y, params, aux).astype(np.float64)
+            promoter_expr_jac = promoter_expr_jac_func(
+                y, params, aux).astype(np.float64)
 
             # if np.linalg.det(promoter_expr_jac @ promoter_expr_jac.T) > 1e-12\
             #    and np.all(np.isfinite(promoter_expr_jac)):
@@ -217,7 +219,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         promoter_inputs = (state_vars, parameter_vars, free_variables)
         promoter_expr_jac_func = sp.lambdify(promoter_inputs,
-                                                  promoter_expr_jac)
+                                             promoter_expr_jac)
 
         inhomog_expr_func = sp.lambdify(
             promoter_inputs, promoter_expr_inhomog)
