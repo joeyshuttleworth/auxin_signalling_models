@@ -48,7 +48,6 @@ setup(
         'jinja2>=3.1.0',
         'seaborn>=0.12',
         'networkx>=3.0',
-        'symengine>=0.14.0',
         'pyvis>=0.3.0',
         'sympy>=1.12',
         'numba',

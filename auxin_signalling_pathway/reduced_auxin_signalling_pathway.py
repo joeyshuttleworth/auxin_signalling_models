@@ -1,7 +1,6 @@
 import numba as nb
 import numpy as np
 import sympy as sp
-import symengine as se
 from numba import cfunc, njit
 from numbalsoda import lsoda_sig
 from sympy.printing.julia import julia_code
