@@ -1,6 +1,7 @@
 import numba as nb
 import numpy as np
 import sympy as sp
+import symengine as se
 from numba import cfunc, njit
 from numbalsoda import lsoda_sig
 from sympy.printing.julia import julia_code
@@ -208,11 +209,18 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
                                                           for s in promoter_vars[1:]])})
 
-        promoter_expr_jac = sp.simplify(
+        promoter_expr_jac = self.simplify_expr(
             promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T))
 
-        promoter_expr_inhomog = sp.simplify(promoter_expr - promoter_expr_jac
-                                            @ sp.Matrix([promoter_vars[1:]]).T)
+        promoter_expr_inhomog = self.simplify_expr(promoter_expr - promoter_expr_jac
+                                                   @ sp.Matrix([promoter_vars[1:]]).T)
+
+        subs_dict = {p: '0' for p in self.promoter_symbols}
+
+        #  We know that these expressions dont depend on the promoter variables
+        #  so this is a cheap and easy way to simplify them
+        promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
+        promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
 
         parameter_vars = list(transition_rates.keys())
         state_vars = self.get_state_variables()
@@ -245,14 +253,22 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
                                                           for s in promoter_vars[1:]])})
 
-        promoter_expr_jac = sp.simplify(
-            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T))
+        promoter_expr_jac = sp.expand(
+            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T)
+        )
 
-        promoter_expr_inhomog = sp.simplify(promoter_expr - promoter_expr_jac
-                                            @ sp.Matrix([promoter_vars[1:]]).T)
+        promoter_expr_inhomog = sp.expand(sp.Matrix(promoter_expr) -
+                                          sp.Matrix(promoter_expr_jac)
+                                          @
+                                          sp.Matrix([promoter_vars[1:]]).T)
 
-        promoter_expr = -promoter_expr_jac.solve(promoter_expr_inhomog)
-        return promoter_expr
+        subs_dict = {p: '0' for p in self.promoter_symbols}
+        promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
+        promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
+
+        promoter_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
+
+        return self.simplify_expr(promoter_expr)
 
     def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
@@ -293,20 +309,23 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
                                                           for s in promoter_vars[1:]])})
 
-        promoter_expr_jac = sp.simplify(
-            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T))
+        promoter_expr_jac = sp.Matrix(
+            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T)
+        )
 
-        promoter_expr_inhomog = sp.simplify(promoter_expr - promoter_expr_jac
-                                            @ sp.Matrix([promoter_vars[1:]]).T)
+        promoter_expr_inhomog = self.simplify_expr(promoter_expr - promoter_expr_jac
+                                                   @ sp.Matrix([promoter_vars[1:]]).T)
 
         state_vars = self.get_state_variables()
 
-        promoter_ss_expr = sp.sympify(
-            promoter_expr_jac.solve(promoter_expr_inhomog))
-        promoter_ss_jac = sp.simplify(promoter_ss_expr.jacobian(state_vars))
+        promoter_ss_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
+        sub_dict = {g: '0' for g in self.promoter_symbols}
+        promoter_ss_expr = promoter_ss_expr.subs(sub_dict)
+        promoter_ss_jac = self.simplify_expr(
+            promoter_ss_expr.jacobian(state_vars))
 
-        jac = sp.simplify(odes.jacobian(self.get_state_variables())
-                          + odes.jacobian(sp.Matrix(promoter_vars[1:])) @ promoter_ss_jac)
+        jac = sp.Matrix(self.simplify_expr(odes.jacobian(self.get_state_variables())
+                                           + odes.jacobian(sp.Matrix(promoter_vars[1:])) @ promoter_ss_jac))
 
         return jac
 
@@ -346,3 +365,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             njit(jac_func)
 
         return jac_func
+
+    def simplify_expr(self, expr):
+        # for g in self.promoter_symbols:
+        #     expr = sp.collect(expr, g)
+        return expr

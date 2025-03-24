@@ -33,6 +33,7 @@ class TestReducedModel(unittest.TestCase):
             {'nARFs': 1, 'nIAAs': 1},
             {'nARFs': 2, 'nIAAs': 1},
             {'nARFs': 1, 'nIAAs': 2},
+            {'nARFs': 3, 'nIAAs': 3},
         ]
 
     def test_graph_generation(self):
@@ -122,7 +123,7 @@ class TestReducedModel(unittest.TestCase):
                 fout.write(latex_out)
 
     def test_output_julia(self):
-        for i, kwargs in enumerate(self.kwargs_list[:1]):
+        for i, kwargs in enumerate(self.kwargs_list[:3]):
             asp_model_r = reduced_asp_class(**kwargs)
 
             jl_out = asp_model_r.output_julia()
@@ -131,7 +132,8 @@ class TestReducedModel(unittest.TestCase):
                 fout.write(jl_out)
 
     def test_get_jacobian(self):
-        for i, kwargs in enumerate(self.kwargs_list[:1]):
+        #  TODO Check answer against reference jacobian
+        for i, kwargs in enumerate(self.kwargs_list[:2]):
             asp_model_r = reduced_asp_class(**kwargs)
             asp_model_r.get_jacobian_expr()
 

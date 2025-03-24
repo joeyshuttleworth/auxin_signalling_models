@@ -210,9 +210,6 @@ class auxin_signalling_pathway():
         self.add_transition_rate(rna_decay_rate,
                                  0.01,
                                  "RNA decay rate")
-        # self.add_transition_rate(rna_production_rate,
-        #                          1e-5,
-        #                          "base RNA production rate")
 
         for rna_symbol in rna_symbols:
             self.add_reaction([self.empty_set_node], [
@@ -490,7 +487,8 @@ class auxin_signalling_pathway():
         if parameter_subs_dict:
             odes = odes.subs(parameter_subs_dict)
 
-        transition_rates = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
+        transition_rates = self.get_default_parameters(
+            parameter_subs_dict=parameter_subs_dict)
 
         return odes, free_variables, transition_rates, constraints
 
@@ -662,7 +660,8 @@ class auxin_signalling_pathway():
 
         state_variables = sp.Matrix([s for s in ic_dict])
 
-        default_parameters = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
+        default_parameters = self.get_default_parameters(
+            parameter_subs_dict=parameter_subs_dict)
         param_names = [sp.sympify(p) for p in default_parameters.keys()]
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
