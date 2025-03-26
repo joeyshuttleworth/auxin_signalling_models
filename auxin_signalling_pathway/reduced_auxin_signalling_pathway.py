@@ -296,7 +296,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return _rhs_func
 
-    def get_jacobian_expr(self, parameter_subs_dict=None):
+    def get_promoter_steady_state_expr(self, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
@@ -314,14 +314,34 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         promoter_expr_inhomog = self.simplify_expr(promoter_expr - promoter_expr_jac
                                                    @ sp.Matrix([promoter_vars[1:]]).T)
+        state_vars = self.get_state_variables()
+        promoter_ss_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
 
+        return promoter_ss_expr
+
+    def get_jacobian_expr(self, parameter_subs_dict=None):
+        odes, free_variables, transition_rates, \
+            constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
+                                                   reduced=True)
+        promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
+        promoter_exprs = constraints[0]
+        promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
+        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
+                                                          for s in promoter_vars[1:]])})
+        promoter_expr_jac = sp.Matrix(
+            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T)
+        )
+        promoter_expr_inhomog = self.simplify_expr(promoter_expr - promoter_expr_jac
+                                                   @ sp.Matrix([promoter_vars[1:]]).T)
         state_vars = self.get_state_variables()
 
-        promoter_ss_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
+        promoter_ss_expr = self.get_promoter_steady_state_expr(parameter_subs_dict)
+
         sub_dict = {g: '0' for g in self.promoter_symbols}
         promoter_ss_expr = promoter_ss_expr.subs(sub_dict)
         promoter_ss_jac = self.simplify_expr(
-            promoter_ss_expr.jacobian(state_vars))
+            promoter_ss_expr.jacobian(state_vars)
+        )
 
         jac = sp.Matrix(self.simplify_expr(odes.jacobian(self.get_state_variables())
                                            + odes.jacobian(sp.Matrix(promoter_vars[1:])) @ promoter_ss_jac))
@@ -337,7 +357,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                          if s[0] == 'G']
 
         default_parameters = self.get_default_parameters()
-        expr = "(" + ", ".join(state_vars) + ") = x\n\n"
+
+        expr = "(" + ", ".join(state_vars) + ") = z\n\n"
         expr += "(" + ", ".join(default_parameters.keys()) + ") = p\n\n"
         expr += "(" + ", ".join(promoter_vars[1:]) + ") = " + \
             str(julia_code(self.get_promoter_expr())) + "\n\n"

@@ -100,8 +100,8 @@ class auxin_signalling_pathway():
             self.add_reaction([], [arf], fwd_rates=[
                 arf_production], bwd_rates=[arf_decay])
 
-        for _, arf in enumerate(iaa_symbols):
-            self.add_reaction([], [arf], fwd_rates=[
+        for _, iaa in enumerate(iaa_symbols):
+            self.add_reaction([], [iaa], fwd_rates=[
                 iaa_production], bwd_rates=[iaa_decay])
 
         for d in dimer_symbols:
@@ -794,7 +794,7 @@ class auxin_signalling_pathway():
             letter1, letter2 = [subs_dict[c] for c in components]
             subs_dict[d] = f'D_{letter1}_{letter2}'
 
-        for i, promoter in enumerate(self.promoter_symbols[1:]):
+        for i, promoter in enumerate(sorted(self.promoter_symbols)[1:]):
             subs_dict[promoter] = r"G_" + str(i + 1)
 
         for i, p in enumerate(transition_rates.keys()):
@@ -821,6 +821,18 @@ class auxin_signalling_pathway():
 
     def remove_state(self, state):
         self.graph.remove_node(state)
+
+        if state in self.promoter_symbols:
+            self.promoter_symbols.remove(state)
+
+        if state in self.arf_symbols:
+            self.arf_symbols.remove(state)
+
+        if state in self.iaa_symbols:
+            self.iaa_symbols.remove(state)
+
+        if state in self.rna_symbols:
+            self.rna_symbols.remove(state)
 
         reaction_set_list = []
         for reaction in self._reactions_set:
