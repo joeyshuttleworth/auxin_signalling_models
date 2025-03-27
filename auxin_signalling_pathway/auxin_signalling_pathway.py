@@ -149,8 +149,14 @@ class auxin_signalling_pathway():
 
             self.add_reaction(
                 [sp.sympify('G')], [promoter],
-                [promoter_binding_rate], [promoter_unbinding_rate],
+                [promoter_binding_rate], [],
                 enzymes=[reactant]
+            )
+
+            self.add_reaction(
+                [sp.sympify('G')], [promoter],
+                [], [promoter_unbinding_rate],
+                enzymes=[]
             )
 
         for promoter in self.promoter_symbols:
@@ -188,8 +194,13 @@ class auxin_signalling_pathway():
                         self.add_transition_rate(promoter_unbinding_rate)
                         self.add_reaction(
                             [partially_bound_promoter], [promoter],
-                            [promoter_binding_rate], [promoter_unbinding_rate],
+                            [promoter_binding_rate], [],
                             enzymes=[reactants[1]])
+
+                        self.add_reaction(
+                            [partially_bound_promoter], [promoter],
+                            [], [promoter_unbinding_rate]
+                        )
 
                 partially_bound_promoter = f"G__{reactants[1]}"
                 if partially_bound_promoter in self.promoter_symbols:
@@ -201,8 +212,13 @@ class auxin_signalling_pathway():
                         self.add_transition_rate(promoter_unbinding_rate)
                         self.add_reaction(
                             [partially_bound_promoter], [promoter],
-                            [promoter_binding_rate], [promoter_unbinding_rate],
+                            [promoter_binding_rate], [],
                             enzymes=[reactants[0]])
+
+                        self.add_reaction(
+                            [partially_bound_promoter], [promoter],
+                            [promoter_unbinding_rate]
+                        )
 
         # Assume constant decay rate for all mRNA
         rna_decay_rate = sp.sympify('d__R')
