@@ -195,7 +195,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
     def get_promoter_ode_funcs(self, parameter_subs_dict=None,
                                njitted=True):
-        odes, free_variables, transition_rates, constraints = \
+        odes, free_variables, _, constraints = \
             self.generate_ode_system(reduced=True,
                                      parameter_subs_dict=parameter_subs_dict)
 
@@ -221,8 +221,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
         promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
 
-        parameter_vars = list(transition_rates.keys())
-        state_vars = self.get_state_variables()
+        parameter_vars = sorted(list(self.get_default_parameters().keys()))
+        state_vars = sorted(self.get_state_variables())
 
         promoter_inputs = (state_vars, parameter_vars, free_variables)
         promoter_expr_jac_func = sp.lambdify(promoter_inputs,
@@ -335,7 +335,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                                                    @ sp.Matrix([promoter_vars[1:]]).T)
         state_vars = self.get_state_variables()
 
-        promoter_ss_expr = self.get_promoter_steady_state_expr(parameter_subs_dict)
+        promoter_ss_expr = self.get_promoter_steady_state_expr(
+            parameter_subs_dict)
 
         sub_dict = {g: '0' for g in self.promoter_symbols}
         promoter_ss_expr = promoter_ss_expr.subs(sub_dict)
@@ -385,6 +386,10 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             njit(jac_func)
 
         return jac_func
+
+    def generate_myokit_model(self):
+        raise NotImplementedError("Myokit output not yet available for reduced models")
+
 
     def simplify_expr(self, expr):
         # for g in self.promoter_symbols:
