@@ -1,5 +1,6 @@
 import logging
 
+import myokit
 import networkx as nx
 import numba as nb
 import numpy as np
@@ -857,6 +858,61 @@ class auxin_signalling_pathway():
                 reaction_set_list.append(reaction)
 
         self._reactions_set = set(reaction_set_list)
+
+    def generate_myokit_model(self, name="", eliminate_promoter_state=''):
+
+        if not name:
+            name = self.__class__.__name__
+
+        odes, free_variables, _, _ = self.generate_ode_system()
+
+        state_variables = self.get_state_variables()
+        param_dict = self.get_default_parameters()
+
+        model = myokit.Model(name)
+
+        #  Nuclear Auxin Pathway
+        comp_name = 'NAP'
+        model.add_component(comp_name)
+        comp = model[comp_name]
+
+        if eliminate_promoter_state == '':
+            eliminate_promoter_state = sorted(self.promoter_symbols)[0]
+
+        # Set up time variable
+        model.add_component('engine')
+        model['engine'].add_variable('time')
+        model['engine']['time'].set_binding('time')
+        model['engine']['time'].set_rhs(0.0)
+
+        #  Setup auxin symbol
+        comp.add_variable(self.aux_symbol)
+        comp[self.aux_symbol].set_rhs(0.0)
+        comp[self.aux_symbol].set_binding('pace')
+
+        for parameter, ic in param_dict.items():
+            comp.add_variable(parameter)
+            comp[parameter].set_rhs(ic)
+
+        for state in state_variables:
+            comp.add_variable(state)
+
+        if eliminate_promoter_state:
+            mk_expr = 1 - sum(sp.Matrix([s for s in self.promoter_symbols if s
+                                         != eliminate_promoter_state]))
+            mk_expr = str(mk_expr)
+            comp[eliminate_promoter_state].set_rhs(mk_expr)
+
+        default_initial_conditions = self.get_default_initial_conditions()
+        for state, ode in zip(state_variables, odes):
+            if state == eliminate_promoter_state:
+                continue
+            ic = default_initial_conditions[state]
+            comp[state].promote(ic)
+            mk_expr = str(ode).replace('**', '^')
+            comp[state].set_rhs(mk_expr)
+
+        return model
 
 
 def _sorted_dict(_dict):
