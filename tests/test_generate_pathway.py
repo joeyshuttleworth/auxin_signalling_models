@@ -3,6 +3,7 @@ import os
 import unittest
 
 import matplotlib.pyplot as plt
+import myokit
 import networkx as nx
 import numpy as np
 import sympy as sp
@@ -117,6 +118,24 @@ class TestGeneratePathway(unittest.TestCase):
                     self.assertIn(sp.sympify(v), odes.free_symbols)
 
             logging.info(transition_rates)
+
+    def test_output_latex(self):
+        for i, kwargs in enumerate(self.kwargs_list):
+            asp_model = asp_class(**kwargs)
+
+            latex_out = asp_model.output_latex()
+
+            with open(os.path.join(self.output_dir, f"full_model_{i}.tex"), 'w') as fout:
+                fout.write(latex_out)
+
+    def test_myokit_output(self):
+        for i, kwargs in enumerate(self.kwargs_list):
+            asp_model = asp_class(**kwargs)
+
+            myokit_model = asp_model.generate_myokit_model()
+
+            myokit.save(os.path.join(self.output_dir, f"full_model_{i}.mmt"),
+                        myokit_model)
 
 
 if __name__ == "__main__":
