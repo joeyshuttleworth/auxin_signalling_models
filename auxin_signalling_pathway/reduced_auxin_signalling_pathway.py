@@ -314,7 +314,6 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         promoter_expr_inhomog = self.simplify_expr(promoter_expr - promoter_expr_jac
                                                    @ sp.Matrix([promoter_vars[1:]]).T)
-        state_vars = self.get_state_variables()
         promoter_ss_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
 
         return promoter_ss_expr
@@ -328,11 +327,6 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
                                                           for s in promoter_vars[1:]])})
-        promoter_expr_jac = sp.Matrix(
-            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T)
-        )
-        promoter_expr_inhomog = self.simplify_expr(promoter_expr - promoter_expr_jac
-                                                   @ sp.Matrix([promoter_vars[1:]]).T)
         state_vars = self.get_state_variables()
 
         promoter_ss_expr = self.get_promoter_steady_state_expr(
