@@ -388,8 +388,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return jac_func
 
     def generate_myokit_model(self):
-        raise NotImplementedError("Myokit output not yet available for reduced models")
-
+        raise NotImplementedError(
+            "Myokit output not yet available for reduced models")
 
     def simplify_expr(self, expr):
         # for g in self.promoter_symbols:
