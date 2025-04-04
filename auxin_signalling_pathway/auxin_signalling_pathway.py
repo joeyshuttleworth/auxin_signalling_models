@@ -82,17 +82,17 @@ class auxin_signalling_pathway():
 
         state_var_eqns = [sp.sympify('0') for _ in self.all_state_vars]
 
-        arf_production = sp.sympify('arf__k')
-        arf_decay = sp.sympify('arf__d')
+        arf_production = sp.sympify('k__arf__all')
+        arf_decay = sp.sympify('d__arf__all')
 
         self.add_transition_rate(arf_production, 1.0,
                                  "production rate of ARFs")
         self.add_transition_rate(arf_decay, 1.0,
                                  "decay rate of ARFs")
 
-        iaa_production = sp.sympify('iaa__k')
-        iaa_decay = sp.sympify('iaa__d')
-        self.add_transition_rate(iaa_production, 1.0,
+        iaa_production = sp.sympify('k__iaa__all')
+        iaa_decay = sp.sympify('d__iaa__all')
+        self.add_transition_rate(iaa_production, 0.0,
                                  "production rate of Aux/IAAs")
         self.add_transition_rate(iaa_decay, 1.0,
                                  "decay rate of Aux/IAAs")
