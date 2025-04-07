@@ -1,5 +1,6 @@
 import logging
 
+import myokit
 import networkx as nx
 import numba as nb
 import numpy as np
@@ -8,12 +9,16 @@ import sympy as sp
 from numba import cfunc, njit
 from numbalsoda import lsoda, lsoda_sig
 from pyvis.network import Network
+from sympy.printing.julia import julia_code
 
 from .reaction import Reaction
 
 
 class auxin_signalling_pathway():
     def __init__(self, nARFs=1, nIAAs=1, aux_func=None):
+
+        self.QSS_bound_species = {}
+        self.parameter_subs_dict = {}
 
         self.nARFs = nARFs
         self.nIAAs = nIAAs
@@ -28,6 +33,8 @@ class auxin_signalling_pathway():
 
         self.strict = True
 
+        self.parameter_sub_dict = {}
+
         #  Initialise parameter symbols
         arf_symbols = [f"ARF_{i + 1}" for i in range(nARFs)]
 
@@ -41,12 +48,13 @@ class auxin_signalling_pathway():
         # Dictionary defining each transition rate
         self.transition_rates = {}
 
-        self.promoter_symbols = ["G"] + [f"G__{arf}__{arf1}"
-                                         for arf in arf_symbols
-                                         for arf1 in arf_symbols]\
+        self.promoter_symbols = ["G"] + [f"G__{arf1}__{arf2}"
+                                         for arf1 in arf_symbols
+                                         for arf2 in arf_symbols if arf2 >= arf1]\
             + [f"G__{arf}" for arf in arf_symbols]\
             + [f"G__{arf}__{iaa}" for arf in arf_symbols
                for iaa in iaa_symbols]
+        self.promoter_symbols = list(set(self.promoter_symbols))
 
         for promoter in self.promoter_symbols:
             self.add_state(promoter, category='promoter')
@@ -54,6 +62,7 @@ class auxin_signalling_pathway():
         dimer_symbols = [f"D__{s1}__{s2}"
                          for s1 in arf_symbols + iaa_symbols
                          for s2 in arf_symbols + iaa_symbols if s2 >= s1]
+        self.dimer_symbols = dimer_symbols
 
         for dimer in dimer_symbols:
             self.add_state(dimer, category='dimer')
@@ -73,17 +82,17 @@ class auxin_signalling_pathway():
 
         state_var_eqns = [sp.sympify('0') for _ in self.all_state_vars]
 
-        arf_production = sp.sympify('arf__k')
-        arf_decay = sp.sympify('arf__d')
+        arf_production = sp.sympify('k__arf__all')
+        arf_decay = sp.sympify('d__arf__all')
 
         self.add_transition_rate(arf_production, 1.0,
                                  "production rate of ARFs")
         self.add_transition_rate(arf_decay, 1.0,
                                  "decay rate of ARFs")
 
-        iaa_production = sp.sympify('iaa__k')
-        iaa_decay = sp.sympify('iaa__d')
-        self.add_transition_rate(iaa_production, 1.0,
+        iaa_production = sp.sympify('k__iaa__all')
+        iaa_decay = sp.sympify('d__iaa__all')
+        self.add_transition_rate(iaa_production, 0.0,
                                  "production rate of Aux/IAAs")
         self.add_transition_rate(iaa_decay, 1.0,
                                  "decay rate of Aux/IAAs")
@@ -92,25 +101,24 @@ class auxin_signalling_pathway():
             self.add_reaction([], [arf], fwd_rates=[
                 arf_production], bwd_rates=[arf_decay])
 
-        for _, arf in enumerate(iaa_symbols):
-            self.add_reaction([], [arf], fwd_rates=[
+        for _, iaa in enumerate(iaa_symbols):
+            self.add_reaction([], [iaa], fwd_rates=[
                 iaa_production], bwd_rates=[iaa_decay])
 
         for d in dimer_symbols:
-            # TODO define parameter labels
             association_rate = sp.sympify(f"k__{d}")
             dissociation_rate = sp.sympify(f"d__{d}")
 
             self.add_transition_rate(association_rate,
-                                     0.25,
+                                     0.001,
                                      f"Association rate of dimer {d}")
             self.add_transition_rate(dissociation_rate,
                                      0.1,
                                      f"Dissociation rate of dimer {d}")
 
             reactants = str(d).split('__')[1:]
-            self.add_reaction(reactants, [d], [association_rate], [
-                dissociation_rate])
+            self.add_reaction(reactants, [d], [association_rate],
+                              [dissociation_rate])
 
         for iaa in iaa_symbols:
             iaa_decay_rate = f"d__{iaa}_{self.aux_symbol}"
@@ -124,7 +132,10 @@ class auxin_signalling_pathway():
             if promoter == 'G':
                 continue
 
-            reactants = sorted(promoter.split('__')[1:])
+            # TODO clean up this code
+            reactant = promoter[3:]
+            if '__' in reactant:
+                reactant = f"D__{reactant}"
 
             promoter_binding_rate = f"k__{promoter}"
             promoter_unbinding_rate = f"d__{promoter}"
@@ -137,14 +148,17 @@ class auxin_signalling_pathway():
                                      "dissociation rate for promoter"
                                      f"{promoter}")
 
-            if len(reactants) == 2:
-                reactants = [f"D__{reactants[0]}__{reactants[1]}"]
-            elif len(reactants) > 3:
-                raise NotImplementedError()
+            self.add_reaction(
+                [sp.sympify('G')], [promoter],
+                [promoter_binding_rate], [],
+                enzymes=[reactant]
+            )
 
             self.add_reaction(
-                reactants + [sp.sympify('G')], [promoter],
-                [promoter_binding_rate], [promoter_unbinding_rate])
+                [sp.sympify('G')], [promoter],
+                [], [promoter_unbinding_rate],
+                enzymes=[]
+            )
 
         for promoter in self.promoter_symbols:
             for rna_symbol in rna_symbols:
@@ -180,8 +194,14 @@ class auxin_signalling_pathway():
                         self.add_transition_rate(promoter_binding_rate)
                         self.add_transition_rate(promoter_unbinding_rate)
                         self.add_reaction(
-                            [reactants[1]] + [partially_bound_promoter], [promoter],
-                            [promoter_binding_rate], [promoter_unbinding_rate])
+                            [partially_bound_promoter], [promoter],
+                            [promoter_binding_rate], [],
+                            enzymes=[reactants[1]])
+
+                        self.add_reaction(
+                            [partially_bound_promoter], [promoter],
+                            [], [promoter_unbinding_rate]
+                        )
 
                 partially_bound_promoter = f"G__{reactants[1]}"
                 if partially_bound_promoter in self.promoter_symbols:
@@ -192,18 +212,21 @@ class auxin_signalling_pathway():
                         self.add_transition_rate(promoter_binding_rate)
                         self.add_transition_rate(promoter_unbinding_rate)
                         self.add_reaction(
-                            [reactants[0]] + [partially_bound_promoter], [promoter],
-                            [promoter_binding_rate], [promoter_unbinding_rate])
+                            [partially_bound_promoter], [promoter],
+                            [promoter_binding_rate], [],
+                            enzymes=[reactants[0]])
+
+                        self.add_reaction(
+                            [partially_bound_promoter], [promoter],
+                            [promoter_unbinding_rate]
+                        )
 
         # Assume constant decay rate for all mRNA
         rna_decay_rate = sp.sympify('d__R')
-        rna_production_rate = sp.sympify('k__R')
+        # rna_production_rate = sp.sympify('k__R')
         self.add_transition_rate(rna_decay_rate,
-                                 1.0 / 240,
-                                 "RNA decay rate")
-        self.add_transition_rate(rna_production_rate,
                                  0.01,
-                                 "base RNA production rate")
+                                 "RNA decay rate")
 
         for rna_symbol in rna_symbols:
             self.add_reaction([self.empty_set_node], [
@@ -238,13 +261,10 @@ class auxin_signalling_pathway():
 
         self.state_var_eqns = state_var_eqns
 
-        self.rhs_func = self._generate_rhs_func(njitted=True)
-        self.cfunc_rhs = self.make_cfunc_rhs(aux_func=aux_func)
+        self.rhs_func = None
+        self.cfunc_rhs = None
 
-        self.jac_func = self.generate_jacobian_func(njitted=True)
-
-    def get_rhs_func(self):
-        return self.rhs_func
+        self.jac_func = None
 
     def add_transition_rate(self, rate, default_value=0.0,
                             description="", strict=True):
@@ -262,7 +282,6 @@ class auxin_signalling_pathway():
         self.transition_rates[rate] = (default_value, description)
 
     def add_state(self, label, category=None, strict=True):
-
         label = str(label)
 
         if strict and label in self.graph.nodes():
@@ -334,7 +353,7 @@ class auxin_signalling_pathway():
         elif strict:
             for state in set(reactants + products + enzymes):
                 if state not in self.graph.nodes:
-                    raise Exception(f"Tried to add reaction with state {state}"
+                    raise Exception(f"Tried to add reaction with state {state} "
                                     f"but {state} does not exist in the model"
                                     "(strict=True)")
 
@@ -389,8 +408,7 @@ class auxin_signalling_pathway():
                         category='enzymatic'
                     )
 
-    @staticmethod
-    def _get_reaction_terms(reaction, variable):
+    def _get_reaction_terms(self, reaction, variable):
         """Get a term for the ODE formulation of a model from a particular reaction
 
         This function is used to generate an ODE system describing the
@@ -415,8 +433,9 @@ class auxin_signalling_pathway():
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products:
-                terms += auxin_signalling_pathway.\
-                    _get_reaction_terms(reaction.reversed(), variable)
+                terms += self._get_reaction_terms(
+                    reaction.reversed(), variable)
+
             fwd_rate = sp.sympify(
                 reaction.fwd_rates[0]) if reaction.fwd_rates else 0
             bwd_rate = sp.sympify(
@@ -439,36 +458,15 @@ class auxin_signalling_pathway():
                              * fwd_rate,
                              sp.prod([sp.sympify(x) for x in reaction.enzymes])
                              * bwd_rate]
-
             return terms
-
-        elif reaction.reaction_type == "tf-hill-act":
-            if variable in reaction.products:
-                assert len(reaction.products) == 1
-                assert len(reaction.reactants) == 0
-                assert len(reaction.enzymes) == 1
-
-                y = sp.sympify(reaction.enzymes[0])
-                k, ka, n = [sp.sympify(x) for x in reaction.fwd_rates]
-                terms.append(k * y / (ka**n + y**n))
-            return terms
-
-        elif reaction.reaction_type == "tf-hill-repr":
-            if variable in reaction.products:
-                assert len(reaction.products) == 0
-                assert len(reaction.enzymes) == 1
-                y = sp.sympify(reaction.enzymes[0])
-                k, ka, n = [sp.sympify(x) for x in reaction.fwd_rates]
-                terms.append(k * (1 - y) / (ka**n + y**n))
-            return terms
-
         else:
             raise NotImplementedError("")
 
     def get_reactions_set(self):
         return self._reactions_set
 
-    def generate_ode_system(self, parameter_subs_dict={}):
+    def generate_ode_system(self, parameter_subs_dict=None,
+                            state_variables=None):
         """Generate a list of sympy expressions comprising an ODE system
 
         :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
@@ -477,48 +475,39 @@ class auxin_signalling_pathway():
 
         """
 
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict.copy()
+
         free_variables = [self.aux_symbol]
 
-        state_variables = list(self.get_default_initial_conditions().keys())
+        if state_variables is None:
+            state_variables = self.get_state_variables()
 
         odes = [sp.sympify('0') for _ in state_variables]
 
         for reaction in self._reactions_set:
             for variable in reaction.reactants + reaction.products:
-                if variable == self.empty_set_node:
+                if str(variable) not in state_variables:
                     continue
 
                 var_index = state_variables.index(variable)
-                odes[var_index] += sp.Add(*
-                                          self._get_reaction_terms(reaction,
-                                                                   variable))
+                new_terms = self._get_reaction_terms(reaction, variable)
+
+                odes[var_index] += sp.Add(*new_terms)
 
         sub_dict = {sp.sympify(self.empty_set_node): 1.0}
-        odes = sp.Matrix([[ode.subs(sub_dict) for ode in odes]]).T
+        odes = sp.Matrix([odes]).T.subs(sub_dict)
 
         # TODO include the fact that the promoter variables sum to 1
         constraints = []
 
-        jacobian = sp.Matrix(odes).jacobian(sp.Matrix(state_variables))
-
         if parameter_subs_dict:
             odes = odes.subs(parameter_subs_dict)
 
-        #  Will take final value found in dictionary (?)
-        transition_rates = {parameter_subs_dict[k] if k in parameter_subs_dict
-                            else k: v
-                            for k, v in self.transition_rates.items()}
+        transition_rates = self.get_default_parameters(
+            parameter_subs_dict=parameter_subs_dict)
 
-        # Ensure that parameters actually appear in the model
-        if parameter_subs_dict:
-            transition_rates = {parameter_subs_dict[key]
-                                if key in parameter_subs_dict
-                                else key:
-                                (value[0], "")
-                                for key, value in transition_rates.items()
-                                }
-
-        return odes, free_variables, transition_rates, constraints, jacobian
+        return odes, free_variables, transition_rates, constraints
 
     def get_state_variables(self):
         """ Construct a list of the model's state variables
@@ -532,7 +521,7 @@ class auxin_signalling_pathway():
                             if s != self.empty_set_node
                             and s != self.aux_symbol]))
 
-    def make_forward_solver(self):
+    def make_forward_solver(self, parameter_subs_dict=None):
         """Generate a function which simulates the model
 
         :returns: a function returning model output under different times,
@@ -540,12 +529,19 @@ class auxin_signalling_pathway():
 
         """
 
-        cfunc_ptr = self.cfunc_rhs.address
+        cfunc = self.make_cfunc_rhs(parameter_subs_dict=parameter_subs_dict)
+        cfunc_ptr = cfunc.address
 
-        default_params_dict = self.get_default_parameters()
-        default_ic_dict = self.get_default_initial_conditions()
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict.copy()
 
         def solver(ts, params_dict, ic_dict, aux, strict=True):
+            default_params_dict = self.get_default_parameters(
+                parameter_subs_dict=parameter_subs_dict)
+            default_ic_dict = self.get_default_initial_conditions()
+
+            params_dict = _sorted_dict(params_dict)
+            ic_dict = _sorted_dict(ic_dict)
 
             if strict:
                 if keys := [k for k in default_params_dict if k not in params_dict]:
@@ -557,10 +553,12 @@ class auxin_signalling_pathway():
 
             for k in params_dict:
                 if k not in default_params_dict:
-                    raise ValueError(f"specified rate {k} not found in model")
+                    raise ValueError(f"specified rate {k} not found in model:"
+                                     f" {default_params_dict.keys()}")
             for k in ic_dict:
                 if k not in default_ic_dict:
-                    raise ValueError(f"specified state {k} not found in model")
+                    raise ValueError(f"specified state {k} not found in model:"
+                                     f" {default_ic_dict.keys()}")
 
             params = np.array([
                 params_dict[key] if key in params_dict
@@ -572,21 +570,28 @@ class auxin_signalling_pathway():
                 ic_dict[key] if key in ic_dict else default_ic_dict[key]
                 for key in default_ic_dict
             ])
+
             ts = np.array(ts)
 
             data = np.full(len(params) + 1, np.nan)
             data[0] = aux
-            data[1:] = params.copy()
-            return lsoda(cfunc_ptr, ic.copy(),
+            data[1:] = params.copy().flatten()
+
+            return lsoda(cfunc_ptr, ic.copy().astype(np.float64),
                          np.array(ts),
-                         data=data.copy())
+                         data=data.astype(np.float64))
 
         return solver
 
-    def get_cfunc_rhs(self):
+    def get_cfunc_rhs(self, **kwargs):
+        if self.cfunc_rhs is None and not kwargs:
+            self.cfunc = self.make_cfunc_rhs()
+        elif kwargs:
+            return self.make_cfunc_rhs()
+
         return self.cfunc_rhs
 
-    def make_cfunc_rhs(self, aux_func=None):
+    def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict=None):
         """Generate a c function which evaluates the RHS of the ODE system
 
         :returns: a c function with signature lsoda_sig for use solving our ODE
@@ -597,12 +602,14 @@ class auxin_signalling_pathway():
         n_y = len(self.get_state_variables())
 
         # Number of params + 'free variables' i.e. auxin
-        n_data = len(self.get_default_parameters()) + 1
-        rhs_func = self.get_rhs_func()
+        n_data = len(self.get_default_parameters(parameter_subs_dict=parameter_subs_dict))\
+            + 1
+        rhs_func = self.generate_rhs_func(parameter_subs_dict=parameter_subs_dict,
+                                          njitted=True)
 
         @cfunc(lsoda_sig)
         def cfunc_rhs(t, y, dy, data):
-            y = nb.carray(y, n_y)
+            y = nb.carray(y, n_y).astype(np.float64)
             dy = nb.carray(dy, n_y)
             data = nb.carray(data, n_data)
 
@@ -614,7 +621,8 @@ class auxin_signalling_pathway():
                 aux = data[0:1]
 
             res = rhs_func(y, params,
-                           aux).astype(np.float64).flatten()
+                           aux).astype(np.float64).flatten().flatten()
+
             assert (res.shape == y.shape)
             dy[:] = res[:]
             return
@@ -623,10 +631,12 @@ class auxin_signalling_pathway():
 
     def generate_jacobian_func(self, njitted=True):
         odes, free_variables, _, \
-            _, jacobian = self.generate_ode_system()
+            _ = self.generate_ode_system()
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
+
+        jacobian = odes.jacobian(self.get_state_variables())
 
         ic_dict = self.get_default_initial_conditions()
 
@@ -655,9 +665,10 @@ class auxin_signalling_pathway():
         else:
             return self.generate_jacobian_func()
 
-    def _generate_rhs_func(self, njitted=False):
+    def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
-            _, jacobian = self.generate_ode_system()
+            _ = self.generate_ode_system(
+                parameter_subs_dict=parameter_subs_dict)
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
@@ -665,17 +676,14 @@ class auxin_signalling_pathway():
         ic_dict = self.get_default_initial_conditions()
 
         state_variables = sp.Matrix([s for s in ic_dict])
-        params_dict = self.get_default_parameters()
-        param_names = sp.Matrix(list(params_dict.keys()))
+
+        default_parameters = self.get_default_parameters(
+            parameter_subs_dict=parameter_subs_dict)
+        param_names = [sp.sympify(p) for p in default_parameters.keys()]
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
-
         rhs_func = sp.lambdify((state_variables, param_names,
                                 free_variables), odes)
-
-        params = np.array([p for p in params_dict.values()]).astype(np.float64)
-        ic = np.array([x for x in ic_dict.values()]).astype(np.float64)
-        rhs_func(ic, params, np.array([.99]))
 
         if njitted:
             rhs_func = njit(rhs_func)
@@ -692,28 +700,38 @@ class auxin_signalling_pathway():
         """
 
         state_vars = self.get_state_variables()
-        ic_dict = {str(s): .0 for s in state_vars if s != self.empty_set_node
+        ic_dict = {str(s): 0.1 for s in state_vars if s != self.empty_set_node
                    and s != self.aux_symbol}
+
+        promoter_vars = [s for s in ic_dict if s[0] == 'G']
+        for v in promoter_vars:
+            ic_dict[v] = 0.0
         ic_dict['G'] = 1.0
 
         for arf in self.arf_symbols:
             ic_dict[arf] = 1.0
 
-        ic_dict = {key: ic_dict[key] for key in sorted(ic_dict.keys())}
+        ic_dict = _sorted_dict(ic_dict)
 
         return ic_dict
 
-    def get_default_parameters(self):
+    def get_default_parameters(self, parameter_subs_dict=None):
         """ Return a default parameter set
 
         :return: a dictionary of parameter values
         """
 
-        print(self.transition_rates)
-        param_dict = {k: v[0] for k, v in self.transition_rates.items()}
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict.copy()
+
+        param_dict = {parameter_subs_dict[k] if k in parameter_subs_dict
+                      and len(sp.sympify(parameter_subs_dict[k]).free_symbols) == 1
+                      else k:
+                      v[0]
+                      for k, v in self.transition_rates.items()}
 
         # sort parameters
-        param_dict = {key: param_dict[key] for key in sorted(list(param_dict))}
+        param_dict = _sorted_dict(param_dict)
 
         return param_dict
 
@@ -773,3 +791,131 @@ class auxin_signalling_pathway():
         if output_path:
             network.from_nx(graph)
             network.show(output_path, notebook=False)
+
+    def output_latex(self, **kwargs):
+        odes, free_variables, transition_rates, \
+            constraints = self.generate_ode_system(**kwargs)
+
+        subs_dict = {}
+
+        letters = ['U', 'V', 'W', 'X', 'Y', 'Z',]
+        for arf, l in zip(self.arf_symbols, letters):
+            subs_dict[arf] = l
+
+        letters = ['u', 'v', 'w', 'x', 'y', 'z',]
+        for iaa, l in zip(self.iaa_symbols, letters):
+            subs_dict[iaa] = l
+
+        for d in self.dimer_symbols:
+            components = d.split('__')[1:]
+            letter1, letter2 = [subs_dict[c] for c in components]
+            subs_dict[d] = f'D_{letter1}_{letter2}'
+
+        for i, promoter in enumerate(sorted(self.promoter_symbols)[1:]):
+            subs_dict[promoter] = r"G_" + str(i + 1)
+
+        for i, p in enumerate(transition_rates.keys()):
+            subs_dict[p] = f"p_{i}"
+
+        odes = odes.subs(subs_dict)
+        return sp.latex(odes)
+
+    def output_julia(self):
+        odes, free_variables, transition_rates, \
+            constraint = self.generate_ode_system()
+        expr = str(julia_code(odes))
+        return expr
+
+    def get_jacobian_expr(self):
+        raise NotImplementedError()
+
+    def remove_transition_rate(self, rate):
+        if rate in self.parameter_subs_dict:
+            self.parameter_subs_dict.pop(rate)
+
+        if rate in self.transition_rates:
+            self.transition_rates.pop(rate)
+
+    def remove_state(self, state):
+        self.graph.remove_node(state)
+
+        if state in self.promoter_symbols:
+            self.promoter_symbols.remove(state)
+
+        if state in self.arf_symbols:
+            self.arf_symbols.remove(state)
+
+        if state in self.iaa_symbols:
+            self.iaa_symbols.remove(state)
+
+        if state in self.rna_symbols:
+            self.rna_symbols.remove(state)
+
+        reaction_set_list = []
+        for reaction in self._reactions_set:
+            if state not in list(reaction.products) + list(reaction.reactants) \
+               + list(reaction.enzymes):
+                reaction_set_list.append(reaction)
+
+        self._reactions_set = set(reaction_set_list)
+
+    def generate_myokit_model(self, name="", eliminate_promoter_state=''):
+
+        if not name:
+            name = self.__class__.__name__
+
+        odes, free_variables, _, _ = self.generate_ode_system()
+
+        state_variables = self.get_state_variables()
+        param_dict = self.get_default_parameters()
+
+        model = myokit.Model(name)
+
+        #  Nuclear Auxin Pathway
+        comp_name = 'NAP'
+        model.add_component(comp_name)
+        comp = model[comp_name]
+
+        if eliminate_promoter_state == '':
+            eliminate_promoter_state = sorted(self.promoter_symbols)[0]
+
+        # Set up time variable
+        model.add_component('engine')
+        model['engine'].add_variable('time')
+        model['engine']['time'].set_binding('time')
+        model['engine']['time'].set_rhs(0.0)
+
+        #  Setup auxin symbol
+        comp.add_variable(self.aux_symbol)
+        comp[self.aux_symbol].set_rhs(0.0)
+        comp[self.aux_symbol].set_binding('pace')
+
+        for parameter, ic in param_dict.items():
+            comp.add_variable(parameter)
+            comp[parameter].set_rhs(ic)
+
+        for state in state_variables:
+            comp.add_variable(state)
+
+        if eliminate_promoter_state:
+            mk_expr = 1 - sum(sp.Matrix([s for s in self.promoter_symbols if s
+                                         != eliminate_promoter_state]))
+            mk_expr = str(mk_expr)
+            comp[eliminate_promoter_state].set_rhs(mk_expr)
+
+        default_initial_conditions = self.get_default_initial_conditions()
+        for state, ode in zip(state_variables, odes):
+            if state == eliminate_promoter_state:
+                continue
+            ic = default_initial_conditions[state]
+            comp[state].promote(ic)
+            mk_expr = str(ode).replace('**', '^')
+            comp[state].set_rhs(mk_expr)
+
+        return model
+
+
+def _sorted_dict(_dict):
+    #  Insertion order is respected (?)
+    ret_dict = {k: _dict[k] for k in sorted(_dict)}
+    return ret_dict
