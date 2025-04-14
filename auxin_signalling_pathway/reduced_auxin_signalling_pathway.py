@@ -344,7 +344,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return jac
 
-    def output_julia(self, aux_func_name="", aux_func_params=[]):
+    def output_julia(self, aux_func_name="", aux_func_params=[], return_svector=True):
         odes, free_variables, transition_rates, \
             constraints = self.generate_ode_system()
 
@@ -371,7 +371,10 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         code_str += f"\t {promoter_vars[0]} = " \
             f"{1 - sum(self.get_promoter_expr())}\n\n"
 
-        code_str += "\treturn " + str(julia_code(odes)) + "\n\n"
+        if return_svector:
+            code_str += "\treturn " + r"SVector{" + f"{len(odes)}" + r"}(" + str(julia_code(odes))[1:-1] + ")\n\n"
+        else:
+            code_str += "\treturn " + f"{len(odes)}" + "(" + str(julia_code(odes))[1:-1] + ")\n\n"
         code_str += "end"
         return code_str
 
