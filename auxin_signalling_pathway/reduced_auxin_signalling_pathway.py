@@ -33,6 +33,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             if "bind" in key:
                 subs_dict[key] = 0.0
 
+        # Simplyfy the model by removing rates which are assumed to be 0
         for arf_symbol in self.arf_symbols:
             for iaa_symbol in self.iaa_symbols:
                 for rna_symbol in self.rna_symbols:
@@ -40,8 +41,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                     self.remove_transition_rate(
                         f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}")
 
-                    subs_dict[f"k__G__{rna_symbol}"] = "0.0"
-                    self.remove_transition_rate(f"k__G__{rna_symbol}")
+                    # subs_dict[f"k__G__{rna_symbol}"] = "0.0"
+                    # self.remove_transition_rate(f"k__G__{rna_symbol}")
 
         self.parameter_subs_dict = subs_dict
 
@@ -343,24 +344,36 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return jac
 
-    def output_julia(self):
+    def output_julia(self, aux_func_name="", aux_func_params=[]):
         odes, free_variables, transition_rates, \
             constraints = self.generate_ode_system()
 
         state_vars = self.get_state_variables()
-        promoter_vars = [s for s in super().get_state_variables()
-                         if s[0] == 'G']
-
         default_parameters = self.get_default_parameters()
 
-        expr = "(" + ", ".join(state_vars) + ") = z\n\n"
-        expr += "(" + ", ".join(default_parameters.keys()) + ") = p\n\n"
-        expr += "(" + ", ".join(promoter_vars[1:]) + ") = " + \
+        promoter_vars = [s for s in super().get_state_variables()
+                         if s[0] == 'G']
+        code_str = f"function {self.__class__.__name__}_f_deriv(z, p, t=0.0)\n"
+
+        code_str += "\t(" + ", ".join(state_vars) + ") = z\n\n"
+
+        if not aux_func_name:
+            code_str += "\t(" + ", ".join(default_parameters.keys() + aux_func_params) + ", " + \
+                f"{self.aux_symbol}) = p\n\n"
+        else:
+            code_str += "\t(" + \
+                ", ".join(list(default_parameters.keys()) + aux_func_params)\
+                + ") = p\n\n"
+            code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(aux_func_params) + ")\n\n"
+
+        code_str += "(" + ", ".join(promoter_vars[1:]) + ") = " + \
             str(julia_code(self.get_promoter_expr())) + "\n\n"
+        code_str += f"\t {promoter_vars[0]} = " \
+            f"{1 - sum(self.get_promoter_expr())}\n\n"
 
-        expr += "return " + str(julia_code(odes))
-
-        return expr
+        code_str += "\treturn " + str(julia_code(odes)) + "\n\n"
+        code_str += "end"
+        return code_str
 
     def generate_jacobian_func(self, njitted=False, parameter_subs_dict=None):
         jac_expr = self.get_jacobian_expr()

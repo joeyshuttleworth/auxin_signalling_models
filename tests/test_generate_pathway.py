@@ -137,6 +137,15 @@ class TestGeneratePathway(unittest.TestCase):
             myokit.save(os.path.join(self.output_dir, f"full_model_{i}.mmt"),
                         myokit_model)
 
+    def test_output_julia(self):
+        for i, kwargs in enumerate(self.kwargs_list[:3]):
+            asp_model = asp_class(**kwargs)
+            jl_out = asp_model.output_julia()
+
+            with open(os.path.join(self.output_dir,
+                                   f"model_{i}.jl"), 'w') as fout:
+                fout.write(jl_out)
+
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
