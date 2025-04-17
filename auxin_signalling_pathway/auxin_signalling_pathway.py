@@ -914,6 +914,9 @@ class auxin_signalling_pathway():
 
         return model
 
+    def get_model_name(self):
+        return f"{self.__class__.__name__}_{self.nARFs}_ARFs_{self.nIAAs}_IAAs"
+
 
 def _sorted_dict(_dict):
     #  Insertion order is respected (?)

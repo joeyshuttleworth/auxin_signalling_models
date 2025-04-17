@@ -146,6 +146,12 @@ class TestGeneratePathway(unittest.TestCase):
                                    f"model_{i}.jl"), 'w') as fout:
                 fout.write(jl_out)
 
+    def test_get_model_name(self):
+        for kwargs in self.kwargs_list:
+            asp_model = asp_class()
+            name = asp_model.get_model_name()
+            self.assertTrue(isinstance(name, str))
+
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
