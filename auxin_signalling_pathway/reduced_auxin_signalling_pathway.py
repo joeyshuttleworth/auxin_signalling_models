@@ -362,7 +362,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                 f"{self.aux_symbol}) = p\n\n"
         else:
             code_str += "\t(" + \
-                ", ".join(list(default_parameters.keys()) + aux_func_params)\
+                ", ".join(sorted(list(default_parameters.keys())) + aux_func_params)\
                 + ") = p\n\n"
             code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(aux_func_params) + ")\n\n"
 
@@ -374,7 +374,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         if return_svector:
             code_str += "\treturn " + r"SVector{" + f"{len(odes)}" + r"}(" + str(julia_code(odes))[1:-1] + ")\n\n"
         else:
-            code_str += "\treturn " + f"{len(odes)}" + "(" + str(julia_code(odes))[1:-1] + ")\n\n"
+            code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
         code_str += "end"
         return code_str
 
