@@ -41,8 +41,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                     self.remove_transition_rate(
                         f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}")
 
-                    # subs_dict[f"k__G__{rna_symbol}"] = "0.0"
-                    # self.remove_transition_rate(f"k__G__{rna_symbol}")
+        for rna_symbol in self.rna_symbols:
+            subs_dict[f"k__G__{rna_symbol}"] = "0.0"
+            self.remove_transition_rate(f"k__G__{rna_symbol}")
 
         self.parameter_subs_dict = subs_dict
 
@@ -319,6 +320,22 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return promoter_ss_expr
 
+    def get_promoter_ss_func(self, parameter_subs_dict=None, njitted=False):
+
+        odes, free_variables, transition_rates, constraints = \
+            self.generate_ode_system(reduced=True,
+                                     parameter_subs_dict=parameter_subs_dict)
+        ss_expr = self.get_promoter_steady_state_expr(parameter_subs_dict)
+
+        state_vars = self.get_state_variables()
+        inputs = (state_vars, transition_rates.keys(), free_variables)
+
+        func = sp.lambdify(inputs, ss_expr)
+
+        if njitted:
+            func = njit(func)
+        return func
+
     def get_jacobian_expr(self, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
@@ -344,9 +361,10 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return jac
 
-    def output_julia(self, aux_func_name="", aux_func_params=[], return_svector=True):
+    def output_julia(self, aux_func_name="", aux_func_params=[], return_svector=True,
+                     parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
-            constraints = self.generate_ode_system()
+            constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
 
         state_vars = self.get_state_variables()
         default_parameters = self.get_default_parameters()
