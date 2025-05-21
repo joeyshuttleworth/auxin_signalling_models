@@ -15,7 +15,8 @@ from .reaction import Reaction
 
 
 class auxin_signalling_pathway():
-    def __init__(self, nARFs=1, nIAAs=1, aux_func=None):
+    def __init__(self, nARFs=1, nIAAs=1, include_arf_transcription=False,
+                 aux_func=None):
 
         self.QSS_bound_species = {}
         self.parameter_subs_dict = {}
@@ -68,6 +69,10 @@ class auxin_signalling_pathway():
             self.add_state(dimer, category='dimer')
 
         rna_symbols = [f"R__{iaa}" for iaa in iaa_symbols]
+
+        if include_arf_transcription:
+            rna_symbols += [f"R__{arf}" for arf in arf_symbols]
+
         self.rna_symbols = rna_symbols
 
         for rna in rna_symbols:
@@ -231,19 +236,17 @@ class auxin_signalling_pathway():
         for rna_symbol in rna_symbols:
             self.add_reaction([self.empty_set_node], [
                 rna_symbol], [], [rna_decay_rate])
-            iaa = rna_symbol.split('__')[1]
+            prot = rna_symbol.split('__')[1]
 
-            iaa_production_rate = f"k__{rna_symbol}__{iaa}"
+            production_rate = f"k__{rna_symbol}__{prot}"
+            rate_default_val = 1.0
 
-            rate_default_val = 1.0 if rna_symbols.index(rna_symbol)\
-                == iaa_symbols.index(iaa) else 0.0
-
-            self.add_transition_rate(iaa_production_rate, rate_default_val,
-                                     f"Rate of production of {iaa} from"
+            self.add_transition_rate(production_rate, rate_default_val,
+                                     f"Rate of production of {prot} from"
                                      f"RNA {rna_symbol}")
 
-            self.add_reaction([], [iaa],
-                              fwd_rates=[iaa_production_rate],
+            self.add_reaction([], [prot],
+                              fwd_rates=[production_rate],
                               enzymes=[rna_symbol])
 
         for iaa in iaa_symbols:
@@ -679,6 +682,7 @@ class auxin_signalling_pathway():
 
         default_parameters = self.get_default_parameters(
             parameter_subs_dict=parameter_subs_dict)
+
         param_names = [sp.sympify(p) for p in default_parameters.keys()]
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
@@ -919,6 +923,6 @@ class auxin_signalling_pathway():
 
 
 def _sorted_dict(_dict):
-    #  Insertion order is respected (?)
+    #  Insertion order is respected in Python>=3.7
     ret_dict = {k: _dict[k] for k in sorted(_dict)}
     return ret_dict

@@ -36,6 +36,9 @@ class TestReducedModel(unittest.TestCase):
             {'nARFs': 3, 'nIAAs': 3},
         ]
 
+        self.kwargs_list += [{**d, 'include_arf_transcription':True}
+                             for d in self.kwargs_list]
+
     def test_graph_generation(self):
         for i, kwargs in enumerate(self.kwargs_list):
             asp_model = reduced_asp_class(**kwargs)
@@ -92,6 +95,8 @@ class TestReducedModel(unittest.TestCase):
             asp_model_full = asp_class(**kwargs)
             asp_model_full.add_transition_rate(
                 "k__RNA__IAA", 1.0, 'Production rate for IAAs')
+            ts = np.linspace(0, 100, 250)
+            param_dict = asp_model_r.get_default_parameters()
 
             parameter_subs_dict = asp_model_r.parameter_subs_dict.copy()
 
@@ -112,6 +117,18 @@ class TestReducedModel(unittest.TestCase):
             full_ic_dict = asp_model_full.get_default_initial_conditions()
             res, succ = solver_full(
                 ts, full_params, full_ic_dict, 1.0, strict=False)
+
+    def test_model_with_arf_transcription(self):
+        for i, kwargs in enumerate(self.kwargs_list):
+            kwargs['include_arf_transcription'] = True
+            asp_model_r = reduced_asp_class(**kwargs)
+            solver_r = asp_model_r.make_forward_solver()
+            ts = np.linspace(0, 100, 250)
+            param_dict = asp_model_r.get_default_parameters()
+            ic_dict = asp_model_r.get_default_initial_conditions()
+            res, succ = solver_r(ts, param_dict, ic_dict, 1.0, strict=False)
+
+            self.assertTrue(succ and np.all(np.isfinite(res)))
 
     def test_output_latex(self):
         for i, kwargs in enumerate(self.kwargs_list):

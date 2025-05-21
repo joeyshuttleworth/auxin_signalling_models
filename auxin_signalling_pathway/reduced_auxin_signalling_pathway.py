@@ -9,8 +9,8 @@ from auxin_signalling_pathway import auxin_signalling_pathway
 
 
 class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
-    def __init__(self, nARFs=1, nIAAs=1, aux_func=None):
-        super().__init__(nARFs, nIAAs, aux_func)
+    def __init__(self, nARFs=1, nIAAs=1, aux_func=None, **kwargs):
+        super().__init__(nARFs=nARFs, nIAAs=nIAAs, aux_func=aux_func, **kwargs)
 
         subs_dict = {}
 
@@ -298,13 +298,17 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return _rhs_func
 
+    def get_promoter_state_vars(self, *args, **kwargs):
+        all_states = super().get_state_variables(*args, **kwargs)
+        state_vars = self.get_state_variables(*args, **kwargs)
+        return sorted([s for s in all_states if s not in state_vars])
+
     def get_promoter_steady_state_expr(self, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
 
         promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
-
         promoter_exprs = constraints[0]
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
