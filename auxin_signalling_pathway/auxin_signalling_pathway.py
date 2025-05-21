@@ -18,6 +18,7 @@ class auxin_signalling_pathway():
     def __init__(self, nARFs=1, nIAAs=1, include_arf_transcription=False,
                  aux_func=None):
 
+        self.include_arf_transcription = include_arf_transcription
         self.QSS_bound_species = {}
         self.parameter_subs_dict = {}
 
@@ -919,7 +920,10 @@ class auxin_signalling_pathway():
         return model
 
     def get_model_name(self):
-        return f"{self.__class__.__name__}_{self.nARFs}_ARFs_{self.nIAAs}_IAAs"
+        name = f"{self.__class__.__name__}_{self.nARFs}_ARFs_{self.nIAAs}_IAAs"
+        if self.include_arf_transcription:
+            name += "_with_arf_transcription"
+        return name
 
 
 def _sorted_dict(_dict):
