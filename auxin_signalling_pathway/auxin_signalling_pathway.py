@@ -240,15 +240,7 @@ class auxin_signalling_pathway():
             prot = rna_symbol.split('__')[1]
 
             production_rate = f"k__{rna_symbol}__{prot}"
-            rate_default_val = 1.0
-
-            self.add_transition_rate(production_rate, rate_default_val,
-                                     f"Rate of production of {prot} from"
-                                     f"RNA {rna_symbol}")
-
-            self.add_reaction([], [prot],
-                              fwd_rates=[production_rate],
-                              enzymes=[rna_symbol])
+            rate_default_val = 0.0
 
         for iaa in iaa_symbols:
             production_rate = sp.sympify(f"k__{iaa}")
@@ -259,6 +251,15 @@ class auxin_signalling_pathway():
             self.add_reaction([self.empty_set_node], [iaa],
                               [production_rate],
                               enzymes=rna_symbols)
+
+
+            self.add_transition_rate(production_rate, rate_default_val,
+                                     f"Rate of production of {prot} from"
+                                     f"RNA {rna_symbol}")
+
+            self.add_reaction([], [prot],
+                              fwd_rates=[production_rate],
+                              enzymes=[rna_symbol])
 
         self.iaa_symbols = iaa_symbols
         self.arf_symbols = arf_symbols
