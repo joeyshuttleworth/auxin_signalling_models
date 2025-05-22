@@ -36,8 +36,11 @@ class TestReducedModel(unittest.TestCase):
             {'nARFs': 3, 'nIAAs': 3},
         ]
 
-        self.kwargs_list += [{**d, 'include_arf_transcription':True}
+        arg_list_with_arf = [{**d, 'include_arf_transcription': True}
                              for d in self.kwargs_list]
+
+        self.kwargs_list = [item for pair in zip(self.kwargs_list, arg_list_with_arf)
+                            for item in pair]
 
     def test_graph_generation(self):
         for i, kwargs in enumerate(self.kwargs_list):
@@ -138,9 +141,10 @@ class TestReducedModel(unittest.TestCase):
 
             with open(os.path.join(self.output_dir, f"reduced_model_{i}.tex"), 'w') as fout:
                 fout.write(latex_out)
-
+interleaved = [item for pair in zip(list1, list2) for item in pair]
     def test_output_julia(self):
-        for i, kwargs in enumerate(self.kwargs_list[:3]):
+        l = int(len(self.kwargs_list) / 2)
+        for i, kwargs in enumerate(self.kwargs_list[:l]):
             asp_model_r = reduced_asp_class(**kwargs)
 
             jl_out = asp_model_r.output_julia()
