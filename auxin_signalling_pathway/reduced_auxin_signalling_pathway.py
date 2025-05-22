@@ -21,13 +21,21 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             if promoter_symbol in self.promoter_symbols:
                 self.promoter_symbols.remove(promoter_symbol)
 
-        for rna_symbol, iaa_symbol in zip(self.rna_symbols,
-                                          self.iaa_symbols):
+        for iaa_symbol in self.iaa_symbols:
+            rna_symbol = f"R__{iaa_symbol}"
             subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
             self.remove_transition_rate(f"k__{rna_symbol}__{iaa_symbol}")
 
+        for arf_symbol in self.arf_symbols:
+            rna_symbol = f"R__{arf_symbol}"
+            subs_dict[f"k__{rna_symbol}__{arf_symbol}"] = "k__RNA__ARF"
+            self.remove_transition_rate(f"k__{rna_symbol}__{arf_symbol}")
+
         self.add_transition_rate(
             "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
+
+        self.add_transition_rate(
+            "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
 
         for key in self.transition_rates:
             if "bind" in key:
@@ -40,10 +48,6 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                     subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = "0.0"
                     self.remove_transition_rate(
                         f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}")
-
-        for rna_symbol in self.rna_symbols:
-            subs_dict[f"k__G__{rna_symbol}"] = "0.0"
-            self.remove_transition_rate(f"k__G__{rna_symbol}")
 
         self.parameter_subs_dict = subs_dict
 
