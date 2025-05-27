@@ -141,10 +141,10 @@ class TestReducedModel(unittest.TestCase):
 
             with open(os.path.join(self.output_dir, f"reduced_model_{i}.tex"), 'w') as fout:
                 fout.write(latex_out)
-interleaved = [item for pair in zip(list1, list2) for item in pair]
+
     def test_output_julia(self):
-        l = int(len(self.kwargs_list) / 2)
-        for i, kwargs in enumerate(self.kwargs_list[:l]):
+        halfway = int(len(self.kwargs_list) / 2)
+        for i, kwargs in enumerate(self.kwargs_list[:halfway]):
             asp_model_r = reduced_asp_class(**kwargs)
 
             jl_out = asp_model_r.output_julia()
