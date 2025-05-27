@@ -24,12 +24,12 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         for iaa_symbol in self.iaa_symbols:
             rna_symbol = f"R__{iaa_symbol}"
             subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
-            self.remove_transition_rate(f"k__{rna_symbol}__{iaa_symbol}")
+            # self.remove_transition_rate(f"k__{rna_symbol}__{iaa_symbol}")
 
         for arf_symbol in self.arf_symbols:
             rna_symbol = f"R__{arf_symbol}"
             subs_dict[f"k__{rna_symbol}__{arf_symbol}"] = "k__RNA__ARF"
-            self.remove_transition_rate(f"k__{rna_symbol}__{arf_symbol}")
+            # self.remove_transition_rate(f"k__{rna_symbol}__{arf_symbol}")
 
         self.add_transition_rate(
             "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
@@ -42,14 +42,34 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                 subs_dict[key] = 0.0
 
         # Simplyfy the model by removing rates which are assumed to be 0
-        for arf_symbol in self.arf_symbols:
-            for iaa_symbol in self.iaa_symbols:
-                for rna_symbol in self.rna_symbols:
-                    subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = "0.0"
-                    self.remove_transition_rate(
-                        f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}")
+        # for arf_symbol in self.arf_symbols:
+        #     for iaa_symbol in self.iaa_symbols:
+        #         for rna_symbol in self.rna_symbols:
+        #             subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = "0.0"
+        #             self.remove_transition_rate(
+        #                 f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}")
 
         self.parameter_subs_dict = subs_dict
+
+    def set_param_substitution_dict(self, param_subs_dict, strict=False):
+
+        if not strict:
+            param_subs_dict = {k: v for k, v in param_subs_dict
+                               if k in self.get_default_parameters().keys()}
+
+        else:
+            for k in param_subs_dict:
+                params = list(super().get_default_parameters(parameter_subs_dict={}).keys())
+                if k not in params:
+                    raise ValueError(f"Tried to substitute for parameter {k}"
+                                     " not found in model parameters "
+                                     f"{params}")
+
+        self.parameter_subs_dict = param_subs_dict
+
+    def get_param_substitution_dict(self):
+        return {k: self.parameter_subs_dict[k]
+                for k in sorted(list(self.parameter_subs_dict.keys()))}
 
     def generate_ode_system(self, reduced=True, do_QSS_sub=True, parameter_subs_dict=None,
                             **kwargs):

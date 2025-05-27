@@ -88,28 +88,35 @@ class auxin_signalling_pathway():
 
         state_var_eqns = [sp.sympify('0') for _ in self.all_state_vars]
 
-        arf_production = sp.sympify('k__arf__all')
         arf_decay = sp.sympify('d__arf__all')
-
-        self.add_transition_rate(arf_production, 1.0,
-                                 "production rate of ARFs")
         self.add_transition_rate(arf_decay, 1.0,
                                  "decay rate of ARFs")
 
-        iaa_production = sp.sympify('k__iaa__all')
+        for _, arf in enumerate(arf_symbols):
+            self.add_reaction([], [arf], fwd_rates=[],
+                              bwd_rates=[arf_decay])
+
+        if not include_arf_transcription:
+            arf_production = sp.sympify('k__arf__all')
+            self.add_transition_rate(arf_production, 1.0,
+                                     "production rate of ARFs")
+
+            for _, arf in enumerate(arf_symbols):
+                self.add_reaction([], [arf], fwd_rates=[
+                    arf_production], bwd_rates=[])
+
+        # iaa_production = sp.sympify('k__iaa__all')
         iaa_decay = sp.sympify('d__iaa__all')
-        self.add_transition_rate(iaa_production, 0.0,
-                                 "production rate of Aux/IAAs")
+
+        # self.add_transition_rate(iaa_production, 0.0,
+        #                          "production rate of Aux/IAAs")
+
         self.add_transition_rate(iaa_decay, 1.0,
                                  "decay rate of Aux/IAAs")
 
-        for _, arf in enumerate(arf_symbols):
-            self.add_reaction([], [arf], fwd_rates=[
-                arf_production], bwd_rates=[arf_decay])
-
-        for _, iaa in enumerate(iaa_symbols):
-            self.add_reaction([], [iaa], fwd_rates=[
-                iaa_production], bwd_rates=[iaa_decay])
+        # for _, iaa in enumerate(iaa_symbols):
+        #     self.add_reaction([], [iaa], fwd_rates=[
+        #         iaa_production], bwd_rates=[iaa_decay])
 
         for d in dimer_symbols:
             association_rate = sp.sympify(f"k__{d}")
