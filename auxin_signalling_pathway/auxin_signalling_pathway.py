@@ -108,15 +108,11 @@ class auxin_signalling_pathway():
         # iaa_production = sp.sympify('k__iaa__all')
         iaa_decay = sp.sympify('d__iaa__all')
 
-        # self.add_transition_rate(iaa_production, 0.0,
-        #                          "production rate of Aux/IAAs")
-
         self.add_transition_rate(iaa_decay, 1.0,
                                  "decay rate of Aux/IAAs")
 
-        # for _, iaa in enumerate(iaa_symbols):
-        #     self.add_reaction([], [iaa], fwd_rates=[
-        #         iaa_production], bwd_rates=[iaa_decay])
+        for _, iaa in enumerate(iaa_symbols):
+            self.add_reaction([], [iaa], bwd_rates=[iaa_decay])
 
         for d in dimer_symbols:
             association_rate = sp.sympify(f"k__{d}")
@@ -134,7 +130,7 @@ class auxin_signalling_pathway():
                               [dissociation_rate])
 
         for iaa in iaa_symbols:
-            iaa_decay_rate = f"d__{iaa}_{self.aux_symbol}"
+            iaa_decay_rate = f"d__{iaa}__{self.aux_symbol}"
             self.add_transition_rate(iaa_decay_rate, 0.1,
                                      "rate of auxin-mediated decay of Aux/IAA")
             self.add_reaction([iaa], [self.empty_set_node],
@@ -256,16 +252,6 @@ class auxin_signalling_pathway():
             self.add_reaction([], [prot],
                               fwd_rates=[production_rate],
                               enzymes=[rna_symbol])
-
-        for iaa in iaa_symbols:
-            production_rate = sp.sympify(f"k__{iaa}")
-
-            self.add_transition_rate(production_rate, 0.0,
-                                     f"Production rate for {iaa}")
-
-            self.add_reaction([self.empty_set_node], [iaa],
-                              [production_rate],
-                              enzymes=rna_symbols)
 
         self.iaa_symbols = iaa_symbols
         self.arf_symbols = arf_symbols

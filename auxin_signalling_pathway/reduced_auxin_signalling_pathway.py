@@ -26,10 +26,11 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
             # self.remove_transition_rate(f"k__{rna_symbol}__{iaa_symbol}")
 
-        for arf_symbol in self.arf_symbols:
-            rna_symbol = f"R__{arf_symbol}"
-            subs_dict[f"k__{rna_symbol}__{arf_symbol}"] = "k__RNA__ARF"
-            # self.remove_transition_rate(f"k__{rna_symbol}__{arf_symbol}")
+        if self.include_arf_transcription:
+            for arf_symbol in self.arf_symbols:
+                rna_symbol = f"R__{arf_symbol}"
+                subs_dict[f"k__{rna_symbol}__{arf_symbol}"] = "k__RNA__ARF"
+                # self.remove_transition_rate(f"k__{rna_symbol}__{arf_symbol}")
 
         self.add_transition_rate(
             "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
@@ -132,10 +133,11 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         state_vars = list(all_ic.keys())
         promoter_vars = [s for s in state_vars if s[0] == 'G']
 
-        return {
+        ret_dict = {
             key: var for key, var in all_ic.items()
             if key not in promoter_vars
         }
+        return {k: ret_dict[k] for k in sorted(list(ret_dict.keys()))}
 
     def get_state_variables(self):
         """ Construct a list of the model's state variables
