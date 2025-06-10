@@ -137,6 +137,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             key: var for key, var in all_ic.items()
             if key not in promoter_vars
         }
+
         return {k: ret_dict[k] for k in sorted(list(ret_dict.keys()))}
 
     def get_state_variables(self):
@@ -391,7 +392,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return jac
 
-    def output_julia(self, aux_func_name="", aux_func_params=[], return_svector=True,
+    def output_julia(self, aux_func_name="", aux_func_params=[],
                      parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
@@ -419,11 +420,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         code_str += f"\t {promoter_vars[0]} = " \
             f"{1 - sum(self.get_promoter_expr())}\n\n"
 
-        if return_svector:
-            code_str += "\treturn " + r"SVector{" + f"{len(odes)}" + r"}(" + str(julia_code(odes))[1:-1] + ")\n\n"
-        else:
-            code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
+        code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
         code_str += "end"
+
         return code_str
 
     def generate_jacobian_func(self, njitted=False, parameter_subs_dict=None):

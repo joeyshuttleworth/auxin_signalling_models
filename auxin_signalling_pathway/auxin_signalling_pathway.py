@@ -818,11 +818,31 @@ class auxin_signalling_pathway():
         odes = odes.subs(subs_dict)
         return sp.latex(odes)
 
-    def output_julia(self):
+    def output_julia(self, aux_func_name="", aux_func_params=[],
+                     parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
-            constraint = self.generate_ode_system()
-        expr = str(julia_code(odes))
-        return expr
+            constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
+
+        state_vars = self.get_state_variables()
+        default_parameters = self.get_default_parameters()
+
+        code_str = f"function {self.__class__.__name__}_f_deriv(z, p, t=0.0)\n"
+
+        code_str += "\t(" + ", ".join(state_vars) + ") = z\n\n"
+
+        if not aux_func_name:
+            code_str += "\t(" + ", ".join(list(default_parameters.keys()) + aux_func_params) + ", " + \
+                f"{self.aux_symbol}) = p\n\n"
+        else:
+            code_str += "\t(" + \
+                ", ".join(sorted(list(default_parameters.keys())) + aux_func_params)\
+                + ") = p\n\n"
+            code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(aux_func_params) + ")\n\n"
+
+        code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
+        code_str += "end"
+
+        return code_str
 
     def get_jacobian_expr(self):
         raise NotImplementedError()
