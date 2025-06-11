@@ -50,6 +50,7 @@ setup(
         'networkx>=3.0',
         'pyvis>=0.3.0',
         'sympy>=1.12',
+        'myokit>=1.36.0',
         'numba',
         'numbalsoda'
     ],
