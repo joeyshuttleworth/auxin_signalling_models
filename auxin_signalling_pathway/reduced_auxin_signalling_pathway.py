@@ -42,31 +42,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             if "bind" in key:
                 subs_dict[key] = 0.0
 
-        # Simplyfy the model by removing rates which are assumed to be 0
-        # for arf_symbol in self.arf_symbols:
-        #     for iaa_symbol in self.iaa_symbols:
-        #         for rna_symbol in self.rna_symbols:
-        #             subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = "0.0"
-        #             self.remove_transition_rate(
-        #                 f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}")
-
         self.parameter_subs_dict = subs_dict
-
-    def set_param_substitution_dict(self, param_subs_dict, strict=False):
-
-        if not strict:
-            param_subs_dict = {k: v for k, v in param_subs_dict
-                               if k in self.get_default_parameters().keys()}
-
-        else:
-            for k in param_subs_dict:
-                params = list(super().get_default_parameters(parameter_subs_dict={}).keys())
-                if k not in params:
-                    raise ValueError(f"Tried to substitute for parameter {k}"
-                                     " not found in model parameters "
-                                     f"{params}")
-
-        self.parameter_subs_dict = param_subs_dict
 
     def get_param_substitution_dict(self):
         return {k: self.parameter_subs_dict[k]
@@ -443,6 +419,21 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             njit(jac_func)
 
         return jac_func
+
+    def set_param_substitution_dict(self, param_subs_dict, strict=False):
+        if not strict:
+            param_subs_dict = {k: v for k, v in param_subs_dict
+                               if k in self.get_default_parameters().keys()}
+
+        else:
+            for k in param_subs_dict:
+                params = list(super().get_default_parameters(parameter_subs_dict={}).keys())
+                if k not in params:
+                    raise ValueError(f"Tried to substitute for parameter {k}"
+                                     " not found in model parameters "
+                                     f"{params}")
+
+        self.parameter_subs_dict = param_subs_dict
 
     def generate_myokit_model(self):
         raise NotImplementedError(
