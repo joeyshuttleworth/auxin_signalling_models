@@ -941,6 +941,37 @@ class auxin_signalling_pathway():
             name += "_with_arf_transcription"
         return name
 
+    def set_param_substitution_dict(self, param_subs_dict, strict=False):
+        if not strict:
+            param_subs_dict = {k: v for k, v in param_subs_dict
+                               if k in self.get_default_parameters().keys()}
+
+        else:
+            for k in param_subs_dict:
+                params = list(self.get_default_parameters(parameter_subs_dict={}).keys())
+                if k not in params:
+                    raise ValueError(f"Tried to substitute for parameter {k}"
+                                     " not found in model parameters "
+                                     f"{params}")
+
+        self.parameter_subs_dict = param_subs_dict
+
+    def get_promoter_transition_rates(self):
+        pp_reactions = []
+        promoter_symbols = [s for s in self.get_state_variables()
+                            if s[0] == 'G']
+
+        for r in self._reactions_set:
+            if np.all(np.isin(r.reactants + r.products, promoter_symbols)):
+                pp_reactions.append(r)
+
+        pp_params = []
+
+        for r in pp_reactions:
+            pp_params += [p for p in r.fwd_rates + r.bwd_rates]
+
+        return pp_params
+
 
 def _sorted_dict(_dict):
     #  Insertion order is respected in Python>=3.7
