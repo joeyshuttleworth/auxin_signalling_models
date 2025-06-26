@@ -459,6 +459,9 @@ class auxin_signalling_pathway():
         else:
             raise NotImplementedError("")
 
+    def set_parameter_subs_dict(self, parameter_subs_dict):
+        self.parameter_subs_dict = parameter_subs_dict
+
     def get_reactions_set(self):
         return self._reactions_set
 
