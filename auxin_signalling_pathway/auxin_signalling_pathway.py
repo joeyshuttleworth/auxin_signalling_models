@@ -827,7 +827,7 @@ class auxin_signalling_pathway():
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
 
         state_vars = self.get_state_variables()
-        default_parameters = self.get_default_parameters()
+        default_parameters = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
 
         code_str = f"function {self.__class__.__name__}_f_deriv(z, p, t=0.0)\n"
 
@@ -873,6 +873,8 @@ class auxin_signalling_pathway():
             self.rna_symbols.remove(state)
 
         reaction_set_list = []
+
+        # Remove any reaction that includes this state, also
         for reaction in self._reactions_set:
             if state not in list(reaction.products) + list(reaction.reactants) \
                + list(reaction.enzymes):
@@ -953,6 +955,14 @@ class auxin_signalling_pathway():
                     raise ValueError(f"Tried to substitute for parameter {k}"
                                      " not found in model parameters "
                                      f"{params}")
+
+            for expr in param_subs_dict.values():
+                for symb in sp.sympify(expr).free_symbols:
+                    params = list(self.get_default_parameters(parameter_subs_dict={}).keys())
+                    if symb not in params:
+                        raise ValueError(f"Tried add expression {expr} to model"
+                                         " but parameter {symb} not found in model parameters "
+                                         f"{params}")
 
         self.parameter_subs_dict = param_subs_dict
 
