@@ -9,7 +9,8 @@ from auxin_signalling_pathway import auxin_signalling_pathway
 
 
 class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
-    def __init__(self, nARFs=1, nIAAs=1, aux_func=None, **kwargs):
+    def __init__(self, nARFs=1, nIAAs=1, aux_func=None, simple_promoter_states=False,
+                 **kwargs):
         super().__init__(nARFs=nARFs, nIAAs=nIAAs, aux_func=aux_func, **kwargs)
 
         subs_dict = {}
@@ -18,19 +19,21 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             promoter_symbol = f"G__{arf}"
             self.remove_state(promoter_symbol)
 
-            if promoter_symbol in self.promoter_symbols:
-                self.promoter_symbols.remove(promoter_symbol)
+        if simple_promoter_states:
+            for i in range(1, nARFs + 1):
+                for j in range(i + 1, nARFs + 1):
+                    promoter_symbol = f"G__ARF_{i}__ARF_{j}"
+                    if promoter_symbol in self.promoter_symbols:
+                        self.remove_state(promoter_symbol)
 
         for iaa_symbol in self.iaa_symbols:
             rna_symbol = f"R__{iaa_symbol}"
             subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
-            # self.remove_transition_rate(f"k__{rna_symbol}__{iaa_symbol}")
 
         if self.include_arf_transcription:
             for arf_symbol in self.arf_symbols:
                 rna_symbol = f"R__{arf_symbol}"
                 subs_dict[f"k__{rna_symbol}__{arf_symbol}"] = "k__RNA__ARF"
-                # self.remove_transition_rate(f"k__{rna_symbol}__{arf_symbol}")
 
         self.add_transition_rate(
             "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
@@ -242,7 +245,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return promoter_expr_jac_func, inhomog_expr_func
 
-    def get_promoter_expr(self, parameter_subs_dict=None):
+    def get_promoter_expr(self, parameter_subs_dict=None, use_cse=True):
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict
 
@@ -272,7 +275,12 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         promoter_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
 
-        return self.simplify_expr(promoter_expr)
+        replacements, expressions = sp.cse(promoter_expr)
+
+        if use_cse:
+            return replacements, expressions
+        else:
+            return promoter_expr
 
     def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
@@ -374,7 +382,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
 
         state_vars = self.get_state_variables()
-        default_parameters = self.get_default_parameters()
+        default_parameters = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
 
         promoter_vars = [s for s in super().get_state_variables()
                          if s[0] == 'G']
@@ -391,10 +399,19 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                 + ") = p\n\n"
             code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(aux_func_params) + ")\n\n"
 
+        # Use common sub expressions to simplify function
+        # This is important if you're going to do auto-diff in julia
+        replacements, expressions = self.get_promoter_expr(use_cse=True)
+        print(replacements, expressions)
+        for r, expr in replacements:
+            code_str += f"{r} = {julia_code(expr)}" + "\n"
+
         code_str += "(" + ", ".join(promoter_vars[1:]) + ") = " + \
-            str(julia_code(self.get_promoter_expr())) + "\n\n"
+            julia_code(expressions[0]) + "\n\n"
+
+        print(promoter_vars)
         code_str += f"\t {promoter_vars[0]} = " \
-            f"{1 - sum(self.get_promoter_expr())}\n\n"
+            f"1 - {' + '.join(promoter_vars[1:])}\n\n"
 
         code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
         code_str += "end"
