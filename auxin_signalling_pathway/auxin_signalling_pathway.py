@@ -232,7 +232,6 @@ class auxin_signalling_pathway():
 
         # Assume constant decay rate for all mRNA
         rna_decay_rate = sp.sympify('d__R')
-        # rna_production_rate = sp.sympify('k__R')
         self.add_transition_rate(rna_decay_rate,
                                  0.01,
                                  "RNA decay rate")
@@ -459,8 +458,20 @@ class auxin_signalling_pathway():
         else:
             raise NotImplementedError("")
 
-    def set_parameter_subs_dict(self, parameter_subs_dict):
-        self.parameter_subs_dict = parameter_subs_dict
+    def set_parameter_subs_dict(self, parameter_subs_dict, strict=True):
+        if not strict:
+            param_subs_dict = {k: v for k, v in parameter_subs_dict
+                               if k in self.get_default_parameters().keys()}
+
+        else:
+            for k in param_subs_dict:
+                params = list(super().get_default_parameters(parameter_subs_dict={}).keys())
+                if k not in params:
+                    raise ValueError(f"Tried to substitute for parameter {k}"
+                                     " not found in model parameters "
+                                     f"{params}")
+
+        self.parameter_subs_dict = param_subs_dict.copy()
 
     def get_reactions_set(self):
         return self._reactions_set
@@ -509,7 +520,7 @@ class auxin_signalling_pathway():
 
         return odes, free_variables, transition_rates, constraints
 
-    def get_state_variables(self):
+    def get_state_variables(self, parameter_subs_dict=None):
         """ Construct a list of the model's state variables
 
         :returns: a list of the model's state variables, sorted in
@@ -517,9 +528,15 @@ class auxin_signalling_pathway():
         concentration
 
         """
-        return sorted(list([str(s) for s in self.graph.nodes()
-                            if s != self.empty_set_node
-                            and s != self.aux_symbol]))
+        state_vars = list([str(s) for s in self.graph.nodes()
+                           if s != self.empty_set_node
+                           and s != self.aux_symbol])
+
+        if parameter_subs_dict:
+            state_vars = [parameter_subs_dict[s] if s in parameter_subs_dict else s
+                          for s in state_vars]
+
+        return sorted(state_vars)
 
     def make_forward_solver(self, parameter_subs_dict=None):
         """Generate a function which simulates the model
@@ -691,7 +708,7 @@ class auxin_signalling_pathway():
 
         return rhs_func
 
-    def get_default_initial_conditions(self):
+    def get_default_initial_conditions(self, parameter_subs_dict=None):
         """List the initial conditions of the system
 
 
@@ -700,7 +717,7 @@ class auxin_signalling_pathway():
 
         """
 
-        state_vars = self.get_state_variables()
+        state_vars = self.get_state_variables(parameter_subs_dict=parameter_subs_dict)
         ic_dict = {str(s): 0.1 for s in state_vars if s != self.empty_set_node
                    and s != self.aux_symbol}
 
@@ -959,7 +976,7 @@ class auxin_signalling_pathway():
             for expr in param_subs_dict.values():
                 for symb in sp.sympify(expr).free_symbols:
                     params = list(self.get_default_parameters(parameter_subs_dict={}).keys())
-                    if symb not in params:
+                    if str(symb) not in params:
                         raise ValueError(f"Tried add expression {expr} to model"
                                          " but parameter {symb} not found in model parameters "
                                          f"{params}")

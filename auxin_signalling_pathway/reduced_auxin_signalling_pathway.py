@@ -19,6 +19,12 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             promoter_symbol = f"G__{arf}"
             self.remove_state(promoter_symbol)
 
+            assoc_rate = "k__" + promoter_symbol
+            dissoc_rate = "d__" + promoter_symbol
+
+            self.remove_transition_rate(assoc_rate)
+            self.remove_transition_rate(dissoc_rate)
+
         if simple_promoter_states:
             for i in range(1, nARFs + 1):
                 for j in range(i + 1, nARFs + 1):
@@ -41,9 +47,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         self.add_transition_rate(
             "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
 
-        for key in self.transition_rates:
+        for key in list(self.transition_rates.keys()):
             if "bind" in key:
-                subs_dict[key] = 0.0
+                self.remove_transition_rate(key)
 
         self.parameter_subs_dict = subs_dict
 
@@ -119,7 +125,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return {k: ret_dict[k] for k in sorted(list(ret_dict.keys()))}
 
-    def get_state_variables(self):
+    def get_state_variables(self, include_promoter_vars=False, parameter_subs_dict=None):
         """ Construct a list of the model's state variables
 
         :returns: a list of the model's state variables, sorted in
@@ -127,7 +133,13 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         concentration
 
         """
-        state_vars = [s for s in sorted(self.graph.nodes()) if s[0] != 'G']
+
+        state_vars = super().get_state_variables(parameter_subs_dict=parameter_subs_dict)
+        state_vars = [s for s in state_vars if s != "G"]
+
+        if not include_promoter_vars:
+            state_vars = [s for s in state_vars if s[:3]!="G__"]
+
         return sorted(list([str(s) for s in state_vars
                             if s != self.empty_set_node
                             and s != self.aux_symbol]))
@@ -434,21 +446,6 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             njit(jac_func)
 
         return jac_func
-
-    def set_param_substitution_dict(self, param_subs_dict, strict=False):
-        if not strict:
-            param_subs_dict = {k: v for k, v in param_subs_dict
-                               if k in self.get_default_parameters().keys()}
-
-        else:
-            for k in param_subs_dict:
-                params = list(super().get_default_parameters(parameter_subs_dict={}).keys())
-                if k not in params:
-                    raise ValueError(f"Tried to substitute for parameter {k}"
-                                     " not found in model parameters "
-                                     f"{params}")
-
-        self.parameter_subs_dict = param_subs_dict
 
     def generate_myokit_model(self):
         raise NotImplementedError(
