@@ -265,8 +265,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             self.generate_ode_system(reduced=True,
                                      parameter_subs_dict=parameter_subs_dict)
 
-        promoter_vars = [s for s in super().get_state_variables()
-                         if s[0] == 'G']
+        promoter_vars = sorted([s for s in super().get_state_variables()
+                                if s[0] == 'G'])
+
         promoter_exprs = constraints[0]
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
@@ -421,7 +422,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             julia_code(expressions[0]) + "\n\n"
 
         code_str += f"\t {promoter_vars[0]} = " \
-            f"1 - {' + '.join(promoter_vars[1:])}\n\n"
+            f"1 - ({' + '.join(promoter_vars[1:])})\n\n"
 
         code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
         code_str += "end"
@@ -455,3 +456,4 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         # for g in self.promoter_symbols:
         #     expr = sp.collect(expr, g)
         return expr
+
