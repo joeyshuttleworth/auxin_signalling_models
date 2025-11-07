@@ -416,15 +416,15 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         # This is important if you're going to do auto-diff in julia
         replacements, expressions = self.get_promoter_expr(use_cse=True)
         for r, expr in replacements:
-            code_str += f"{r} = {julia_code(expr)}" + "\n"
+            code_str += f"\t{r} = {julia_code(expr)}" + "\n"
 
-        code_str += "(" + ", ".join(promoter_vars[1:]) + ") = " + \
+        code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " + \
             julia_code(expressions[0]) + "\n\n"
 
         code_str += f"\t {promoter_vars[0]} = " \
             f"1 - ({' + '.join(promoter_vars[1:])})\n\n"
 
-        code_str += "dz .= (" + str(julia_code(odes))[1:-1] + ")\n\n"
+        code_str += "\tdz .= (" + str(julia_code(odes))[1:-1] + ")\n\n"
         code_str += "end"
 
         return code_str
