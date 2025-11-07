@@ -399,7 +399,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         promoter_vars = [s for s in super().get_state_variables()
                          if s[0] == 'G']
-        code_str = f"function {self.__class__.__name__}_f_deriv(z, p, t=0.0)\n"
+        code_str = f"function {self.__class__.__name__}_f_deriv!(dz, z, p, t=0.0)\n"
 
         code_str += "\t(" + ", ".join(state_vars) + ") = z\n\n"
 
@@ -424,7 +424,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         code_str += f"\t {promoter_vars[0]} = " \
             f"1 - ({' + '.join(promoter_vars[1:])})\n\n"
 
-        code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
+        code_str += "dz .= (" + str(julia_code(odes))[1:-1] + ")\n\n"
         code_str += "end"
 
         return code_str
