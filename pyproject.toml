@@ -49,9 +49,6 @@ include_package_data = true
 [project.scripts]
 auxin_signalling_models = "auxin_signalling_models.scripts.__main__:main"
 
-[tool.setuptools]
-packages=["auxin_signalling_models"]
-
 [tool.setuptools.packages.find]
 include = ["auxin_signalling_models", "auxin_signalling_models.*"]
 
