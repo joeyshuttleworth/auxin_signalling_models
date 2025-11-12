@@ -31,7 +31,8 @@ classifiers = [
 dependencies = [
         'scipy>=1.7',
         'numpy>=1.21',
-        'sympy>=1.10'
+        'sympy>=1.10',
+        'networkx>=3.4.2'
 ]
 
 [project.optional-dependencies]
