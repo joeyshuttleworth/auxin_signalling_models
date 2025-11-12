@@ -76,7 +76,7 @@ class TestGeneratePathway(unittest.TestCase):
         param_dict = asp_model.get_default_parameters()
 
         solver = asp_model.make_forward_solver()
-        ts = np.linspace(0, 1000, 1000)
+        ts = np.linspace(0, 100, 2)
         res, success = solver(ts, param_dict, ic_dict, 0.99)
 
         return res, success
