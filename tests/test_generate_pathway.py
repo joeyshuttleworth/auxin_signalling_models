@@ -8,7 +8,7 @@ import networkx as nx
 import numpy as np
 import sympy as sp
 
-from auxin_signalling_models.auxin_signalling_models import \
+from auxin_signalling_models.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
 
 
