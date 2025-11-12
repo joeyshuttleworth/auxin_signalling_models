@@ -5,8 +5,8 @@ import unittest
 import matplotlib.pyplot as plt
 import numpy as np
 
-from auxin_signalling_pathway import auxin_signalling_pathway as asp_class
-from auxin_signalling_pathway.reduced_auxin_signalling_pathway import \
+from auxin_signalling_models import auxin_signalling_pathway as asp_class
+from auxin_signalling_models.reduced_auxin_signalling_pathway import \
     reduced_auxin_signalling_pathway as reduced_asp_class
 
 

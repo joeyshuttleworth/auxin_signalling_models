@@ -5,7 +5,7 @@ from numba import cfunc, njit
 from numbalsoda import lsoda_sig
 from sympy.printing.julia import julia_code
 
-from auxin_signalling_pathway import auxin_signalling_pathway
+from auxin_signalling_models import auxin_signalling_pathway
 
 
 class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
@@ -134,11 +134,12 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         """
 
-        state_vars = super().get_state_variables(parameter_subs_dict=parameter_subs_dict)
+        state_vars = super().get_state_variables(
+            parameter_subs_dict=parameter_subs_dict)
         state_vars = [s for s in state_vars if s != "G"]
 
         if not include_promoter_vars:
-            state_vars = [s for s in state_vars if s[:3]!="G__"]
+            state_vars = [s for s in state_vars if s[:3] != "G__"]
 
         return sorted(list([str(s) for s in state_vars
                             if s != self.empty_set_node
@@ -392,10 +393,12 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
     def output_julia(self, aux_func_name="", aux_func_params=[],
                      parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
-            constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
+            constraints = self.generate_ode_system(
+                parameter_subs_dict=parameter_subs_dict)
 
         state_vars = self.get_state_variables()
-        default_parameters = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
+        default_parameters = self.get_default_parameters(
+            parameter_subs_dict=parameter_subs_dict)
 
         promoter_vars = [s for s in super().get_state_variables()
                          if s[0] == 'G']
@@ -410,7 +413,8 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             code_str += "\t(" + \
                 ", ".join(sorted(list(default_parameters.keys())) + aux_func_params)\
                 + ") = p\n\n"
-            code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(aux_func_params) + ")\n\n"
+            code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(
+                aux_func_params) + ")\n\n"
 
         # Use common sub expressions to simplify function
         # This is important if you're going to do auto-diff in julia
@@ -456,4 +460,3 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         # for g in self.promoter_symbols:
         #     expr = sp.collect(expr, g)
         return expr
-

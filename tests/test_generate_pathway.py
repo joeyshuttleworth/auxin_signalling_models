@@ -8,7 +8,7 @@ import networkx as nx
 import numpy as np
 import sympy as sp
 
-from auxin_signalling_pathway.auxin_signalling_pathway import \
+from auxin_signalling_models.auxin_signalling_models import \
     auxin_signalling_pathway as asp_class
 
 
@@ -22,7 +22,6 @@ def setup_output_directory(dir_name, subdir_name):
 
 
 class TestGeneratePathway(unittest.TestCase):
-
     def setUp(self):
         test_output_dir = setup_output_directory(
             'test_output', f"{type(self).__name__}")

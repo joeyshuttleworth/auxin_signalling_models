@@ -465,7 +465,8 @@ class auxin_signalling_pathway():
 
         else:
             for k in param_subs_dict:
-                params = list(super().get_default_parameters(parameter_subs_dict={}).keys())
+                params = list(super().get_default_parameters(
+                    parameter_subs_dict={}).keys())
                 if k not in params:
                     raise ValueError(f"Tried to substitute for parameter {k}"
                                      " not found in model parameters "
@@ -717,7 +718,8 @@ class auxin_signalling_pathway():
 
         """
 
-        state_vars = self.get_state_variables(parameter_subs_dict=parameter_subs_dict)
+        state_vars = self.get_state_variables(
+            parameter_subs_dict=parameter_subs_dict)
         ic_dict = {str(s): 0.1 for s in state_vars if s != self.empty_set_node
                    and s != self.aux_symbol}
 
@@ -841,10 +843,12 @@ class auxin_signalling_pathway():
     def output_julia(self, aux_func_name="", aux_func_params=[],
                      parameter_subs_dict=None):
         odes, free_variables, transition_rates, \
-            constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
+            constraints = self.generate_ode_system(
+                parameter_subs_dict=parameter_subs_dict)
 
         state_vars = self.get_state_variables()
-        default_parameters = self.get_default_parameters(parameter_subs_dict=parameter_subs_dict)
+        default_parameters = self.get_default_parameters(
+            parameter_subs_dict=parameter_subs_dict)
 
         code_str = f"function {self.__class__.__name__}_f_deriv(z, p, t=0.0)\n"
 
@@ -857,7 +861,8 @@ class auxin_signalling_pathway():
             code_str += "\t(" + \
                 ", ".join(sorted(list(default_parameters.keys())) + aux_func_params)\
                 + ") = p\n\n"
-            code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(aux_func_params) + ")\n\n"
+            code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(
+                aux_func_params) + ")\n\n"
 
         code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
         code_str += "end"
@@ -967,7 +972,8 @@ class auxin_signalling_pathway():
 
         else:
             for k in param_subs_dict:
-                params = list(self.get_default_parameters(parameter_subs_dict={}).keys())
+                params = list(self.get_default_parameters(
+                    parameter_subs_dict={}).keys())
                 if k not in params:
                     raise ValueError(f"Tried to substitute for parameter {k}"
                                      " not found in model parameters "
@@ -975,7 +981,8 @@ class auxin_signalling_pathway():
 
             for expr in param_subs_dict.values():
                 for symb in sp.sympify(expr).free_symbols:
-                    params = list(self.get_default_parameters(parameter_subs_dict={}).keys())
+                    params = list(self.get_default_parameters(
+                        parameter_subs_dict={}).keys())
                     if str(symb) not in params:
                         raise ValueError(f"Tried add expression {expr} to model"
                                          " but parameter {symb} not found in model parameters "
