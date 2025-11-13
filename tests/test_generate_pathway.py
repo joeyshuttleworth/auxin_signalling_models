@@ -34,23 +34,17 @@ class TestGeneratePathway(unittest.TestCase):
             {'nARFs': 1, 'nIAAs': 1},
             {'nARFs': 2, 'nIAAs': 1},
             {'nARFs': 1, 'nIAAs': 2},
-            {'nARFs': 4, 'nIAAs': 4}
+            {'nARFs': 2, 'nIAAs': 2},
+            {'nARFs': 3, 'nIAAs': 1},
+            {'nARFs': 4, 'nIAAs': 2},
         ]
 
         self.test_models = [asp_class(**kwargs) for
                             kwargs in self.kwargs_list]
 
     def test_graph_generation(self):
-        kwargs_list = [
-            {'nARFs': 1, 'nIAAs': 1},
-            {'nARFs': 2, 'nIAAs': 1},
-            {'nARFs': 1, 'nIAAs': 2},
-            {'nARFs': 4, 'nIAAs': 4}
-        ]
-
-        for i, kwargs in enumerate(kwargs_list):
+        for i, kwargs in enumerate(self.kwargs_list):
             asp_model = asp_class(**kwargs)
-            logging.info(nx.write_network_text(asp_model.graph))
             asp_model.draw_graph()
             plt.savefig(os.path.join(self.output_dir, f"test_graph_{i}"))
             plt.clf()

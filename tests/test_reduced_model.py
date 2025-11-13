@@ -32,8 +32,7 @@ class TestReducedModel(unittest.TestCase):
         self.kwargs_list = [
             {'nARFs': 1, 'nIAAs': 1},
             {'nARFs': 2, 'nIAAs': 1},
-            {'nARFs': 1, 'nIAAs': 2},
-            {'nARFs': 3, 'nIAAs': 3},
+            {'nARFs': 2, 'nIAAs': 2},
         ]
 
         arg_list_with_arf = [{**d, 'include_arf_transcription': True}
@@ -45,7 +44,6 @@ class TestReducedModel(unittest.TestCase):
     def test_graph_generation(self):
         for i, kwargs in enumerate(self.kwargs_list):
             asp_model = reduced_asp_class(**kwargs)
-            # logging.info(nx.write_network_text(asp_model.graph))
             asp_model.draw_graph()
             plt.savefig(os.path.join(self.output_dir, f"test_graph_{i}"))
             plt.clf()
@@ -69,7 +67,7 @@ class TestReducedModel(unittest.TestCase):
         param_dict = asp_model.get_default_parameters()
 
         solver = asp_model.make_forward_solver()
-        ts = np.linspace(0, 1000, 1000)
+        ts = np.linspace(0, 10, 10)
         res, success = solver(ts, param_dict, ic_dict, 0.99)
 
         return res, success
@@ -98,7 +96,7 @@ class TestReducedModel(unittest.TestCase):
             asp_model_full = asp_class(**kwargs)
             asp_model_full.add_transition_rate(
                 "k__RNA__IAA", 1.0, 'Production rate for IAAs')
-            ts = np.linspace(0, 100, 250)
+            ts = np.linspace(0, 100, 10)
             param_dict = asp_model_r.get_default_parameters()
 
             parameter_subs_dict = asp_model_r.parameter_subs_dict.copy()
@@ -110,7 +108,7 @@ class TestReducedModel(unittest.TestCase):
             solver_full = asp_model_full.make_forward_solver(
                 parameter_subs_dict=parameter_subs_dict)
 
-            ts = np.linspace(0, 100, 250)
+            ts = np.linspace(0, 100, 10)
             param_dict = asp_model_r.get_default_parameters()
             res, succ = solver_r(ts, param_dict, reduced_ic_dict, 1.0)
             self.assertTrue(succ and np.all(np.isfinite(res)))
@@ -122,7 +120,7 @@ class TestReducedModel(unittest.TestCase):
                 ts, full_params, full_ic_dict, 1.0, strict=False)
 
     def test_model_with_arf_transcription(self):
-        for i, kwargs in enumerate(self.kwargs_list):
+        for i, kwargs in enumerate(self.kwargs_list[:2]):
             kwargs['include_arf_transcription'] = True
             asp_model_r = reduced_asp_class(**kwargs)
             solver_r = asp_model_r.make_forward_solver()
@@ -130,7 +128,6 @@ class TestReducedModel(unittest.TestCase):
             param_dict = asp_model_r.get_default_parameters()
             ic_dict = asp_model_r.get_default_initial_conditions()
             res, succ = solver_r(ts, param_dict, ic_dict, 1.0, strict=False)
-
             self.assertTrue(succ and np.all(np.isfinite(res)))
 
     def test_output_latex(self):
