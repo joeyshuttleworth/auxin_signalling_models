@@ -32,7 +32,7 @@ dependencies = [
         'scipy>=1.7',
         'numpy>=1.21',
         'sympy>=1.10',
-        'networkx>=3.4.2'
+        'networkx>=3.4.2',
         'numba>=0.61.2',
         'numbalsoda @ git+ssh://git@github.com/NicholasWogan/numbalsoda@c9183b5bc75002bac5270339f0e0ca645f102b4d'
 ]
