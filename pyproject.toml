@@ -34,7 +34,7 @@ dependencies = [
         'sympy>=1.10',
         'networkx>=3.4.2'
         'numba>=0.61.2',
-        'numbalsoda @ git+https://git@github.com/NicholasWogan/numbalsoda@c9183b5bc75002bac5270339f0e0ca645f102b4d',
+        'numbalsoda @ git+ssh://git@github.com/NicholasWogan/numbalsoda@c9183b5bc75002bac5270339f0e0ca645f102b4d'
 ]
 
 [project.optional-dependencies]
