@@ -140,9 +140,20 @@ class TestGeneratePathway(unittest.TestCase):
 
     def test_get_model_name(self):
         for kwargs in self.kwargs_list:
-            asp_model = asp_class()
+            asp_model = asp_class(**kwargs)
             name = asp_model.get_model_name()
             self.assertTrue(isinstance(name, str))
+
+    def test_print_parameters(self):
+        for i, kwargs in enumerate(self.kwargs_list):
+            asp_model = asp_class(**kwargs)
+
+            pretty_str = asp_model.pretty_print_parameter_list()
+            self.assertTrue(isinstance(pretty_str, dict))
+
+            with open(os.path.join(self.output_dir, f"full_model_{i}_params.txt"), 'w') as fout:
+                fout.write(str(pretty_str))
+
 
 
 if __name__ == "__main__":

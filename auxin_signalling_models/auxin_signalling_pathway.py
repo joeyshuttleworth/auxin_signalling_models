@@ -1006,8 +1006,26 @@ class auxin_signalling_pathway():
 
         return pp_params
 
+    def pretty_print_parameter_list(self):
+
+        ret_dict = {p: self.pretty_print_par(p)
+                    for p in sorted(list(self.get_default_parameters().keys()))}
+
+        return ret_dict
+
+    @classmethod
+    def pretty_print_par(cls, par):
+        parts = par.split("__")
+        head = parts[0]          # k
+        top = parts[1]           # D
+        rest = parts[2:]         # ['A_1', 'I_1']
+
+        return f"{head}_{{{top}_{{{', '.join(rest)}}}}}"
+
 
 def _sorted_dict(_dict):
     #  Insertion order is respected in Python>=3.7
     ret_dict = {k: _dict[k] for k in sorted(_dict)}
     return ret_dict
+
+
