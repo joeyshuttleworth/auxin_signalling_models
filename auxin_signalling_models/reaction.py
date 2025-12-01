@@ -10,7 +10,6 @@ class Reaction:
 
      - linear: using the law of mass action (simple production and linear decay
      are possible by using the empty-set node as either a reactant or product)
-
     """
 
     reactants: tuple[str, ...]

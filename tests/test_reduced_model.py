@@ -53,7 +53,7 @@ class TestReducedModel(unittest.TestCase):
                 fout.write(repr(asp_model.generate_ode_system()))
 
     def generate_solve_ode(self, asp_model, i):
-        odes, free_variables, transition_rates, constraints = \
+        odes, free_variables, parameters, constraints = \
             asp_model.generate_ode_system()
 
         with open(os.path.join(self.output_dir,
@@ -61,7 +61,7 @@ class TestReducedModel(unittest.TestCase):
             fout.write(f"ODEs: {odes}\n")
             fout.write(f"constraints: {constraints}\n")
             fout.write(f"free variables: {free_variables}\n")
-            fout.write(f"transition rates: {transition_rates}\n")
+            fout.write(f"transition rates: {parameters}\n")
 
         ic_dict = asp_model.get_default_initial_conditions()
         param_dict = asp_model.get_default_parameters()
@@ -94,7 +94,7 @@ class TestReducedModel(unittest.TestCase):
         for kwargs in self.kwargs_list:
             asp_model_r = reduced_asp_class(**kwargs)
             asp_model_full = asp_class(**kwargs)
-            asp_model_full.add_transition_rate(
+            asp_model_full.add_model_parameter(
                 "k__RNA__IAA", 1.0, 'Production rate for IAAs')
             ts = np.linspace(0, 100, 10)
             param_dict = asp_model_r.get_default_parameters()
