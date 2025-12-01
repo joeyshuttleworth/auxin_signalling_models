@@ -1079,8 +1079,7 @@ class auxin_signalling_pathway():
 
         return _sorted_dict(self.parameter_substitution_dict)
 
-
-    def pretty_print_parameterameter_dict(self):
+    def pretty_print_parameter_dict(self):
         """
         Print all model parameters in a LaTeX-maths format
 
@@ -1093,7 +1092,7 @@ class auxin_signalling_pathway():
         return ret_dict
 
     @classmethod
-    def pretty_print_parameterameter(cls, par):
+    def pretty_print_parameter(cls, par):
         """
         Convert a model parameter into LaTeX maths format
 
