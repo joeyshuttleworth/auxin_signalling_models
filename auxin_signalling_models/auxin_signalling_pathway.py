@@ -1,4 +1,5 @@
 import logging
+from typing import Callable, List
 
 import myokit
 import networkx as nx
@@ -11,15 +12,12 @@ from numbalsoda import lsoda, lsoda_sig
 from pyvis.network import Network
 from sympy.printing.julia import julia_code
 
-from typing import Callable, List
-
 from .reaction import Reaction
 
 
 class auxin_signalling_pathway():
     def __init__(self, nARFs: int = 1, nIAAs: int = 1, include_arf_transcription: bool = False,
                  aux_func: Callable[[float], float] = None):
-
         """
         A graph-based representation of an auxin-signalling pathway in terms of chemical reactions and chemical species
 
@@ -300,7 +298,8 @@ class auxin_signalling_pathway():
 
         # Check if label can be converted to a sympy Symbol
         if not label.isidentifier():
-            raise ValueError(f"label:{label} is not a valid variable identifier")
+            raise ValueError(
+                f"label:{label} is not a valid variable identifier")
 
         if strict is None:
             strict = self.strict
@@ -325,7 +324,8 @@ class auxin_signalling_pathway():
         label = str(label)
 
         if strict and label in self.graph.nodes():
-            raise ValueError(f"Tried to add state {label} to the model but it already exists (strict=True)")
+            raise ValueError(
+                f"Tried to add state {label} to the model but it already exists (strict=True)")
 
         self.graph.add_node(label, category=category)
 
@@ -513,8 +513,8 @@ class auxin_signalling_pathway():
 
         return self._reactions_set
 
-    def generate_ode_system(self, parameter_subs_dict: dict=None,
-                            state_variables: List=None):
+    def generate_ode_system(self, parameter_subs_dict: dict = None,
+                            state_variables: List = None):
         """Generate a list of sympy expressions comprising an ODE system
 
         :params parameter_subs_dict: a dictionary of parameter substitutions
@@ -1053,7 +1053,6 @@ class auxin_signalling_pathway():
         :returns: A list of parameters
         """
 
-
         pp_reactions = []
         promoter_symbols = [s for s in self.get_state_variables()
                             if s[0] == 'G']
@@ -1068,7 +1067,6 @@ class auxin_signalling_pathway():
             pp_params += [p for p in r.fwd_rates + r.bwd_rates]
 
         return pp_params
-
 
     def get_parameter_substitution_dict(self):
         """
@@ -1094,14 +1092,11 @@ class auxin_signalling_pathway():
     @classmethod
     def pretty_print_parameter(cls, par):
         """
-        Convert a model parameter into LaTeX maths format
 
         :param par: The parameter label to convert
 
         :returns: A LaTeX-maths string
-
         """
-
         parts = par.split("__")
         head = parts[0]
         top = parts[1]

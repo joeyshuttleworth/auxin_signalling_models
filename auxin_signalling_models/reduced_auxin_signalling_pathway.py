@@ -1,10 +1,11 @@
+from typing import Callable, List
+
 import numba as nb
 import numpy as np
 import sympy as sp
 from numba import cfunc, njit
 from numbalsoda import lsoda_sig
 from sympy.printing.julia import julia_code
-from typing import Callable, List
 
 from auxin_signalling_models import auxin_signalling_pathway
 
@@ -12,7 +13,6 @@ from auxin_signalling_models import auxin_signalling_pathway
 class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
     def __init__(self, nARFs: int = 1, nIAAs: int = 1, aux_func: Callable[[float], float] = None, simple_promoter_states: bool = False,
                  **kwargs):
-
         """
         A simplified version of a auxin_signalling_pathway model, with promoter-protein dynamics simplified with a quasi steady-state assumption
 
@@ -99,12 +99,12 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                     continue
                 free_symbols = set([str(s) for s in ode.free_symbols])
                 for s in [s for s in free_symbols if s
-                            in self.QSS_bound_species]:
+                          in self.QSS_bound_species]:
                     v = self.QSS_bound_species[s]
                     if state_var not in v:
                         ode = ode.subs({
                             s: sp.sympify(s)**2 / sum([sp.sympify(x)
-                                                        for x in [s] + list(v)])
+                                                       for x in [s] + list(v)])
                         })
                         ode = ode.subs({s: 0.0 for s in v})
                 new_odes.append(ode)

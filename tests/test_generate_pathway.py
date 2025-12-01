@@ -158,7 +158,8 @@ class TestGeneratePathway(unittest.TestCase):
         asp_model = asp_class(**self.kwargs_list[0])
         self.assertRaises(
             ValueError,
-            lambda: asp_model.add_model_parameter("1/////this is a bad parameter parameter")
+            lambda: asp_model.add_model_parameter(
+                "1/////this is a bad parameter parameter")
         )
 
 
