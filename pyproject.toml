@@ -64,4 +64,4 @@ Homepage = "https://github.com/joeyshuttleworth/auxin_signalling_models"
 Source = "https://github.com/joeyshuttleworth/auxin_signalling_models"
 
 [tool.isort]
-skip = ["_version.py"]
+skip = ["docs", "build", ".venv", "auxin_signalling_models/_version.py"]
