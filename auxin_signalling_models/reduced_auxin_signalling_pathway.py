@@ -541,7 +541,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return jac_func
 
-    def generate_myokit_model(self):
+    def generate_myokit_model(self, *args, **kwargs):
         """
         Generate myokit code for the model. This method is unimplemented
 

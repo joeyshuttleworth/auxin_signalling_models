@@ -889,6 +889,16 @@ class auxin_signalling_pathway():
 
     def output_julia(self, aux_func_name="", aux_func_params=[],
                      parameter_subs_dict=None):
+        """
+        Generate julia code describing the model including the quasi steady-state assumption
+
+        :param aux_func_name: A julia function name for an externally defined auxin-input signal
+        :param aux_func_params: Optional parameters to include for the auxin input function
+        :param parameter_subs_dict: A dictionary of parameter substitutions
+
+        :returns: A string contianing a julia function definition
+        """
+
         odes, free_variables, parameters, \
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
@@ -916,18 +926,53 @@ class auxin_signalling_pathway():
 
         return code_str
 
-    def get_jacobian_expr(self):
+    def get_jacobian_expr(self, parameter_subs_dict=None):
+        """
+        Symbolically the jacobian of the model's derivative function
+
+        Not implemented
+
+        :param parameter_subs_dict: Dictionary of parameter substitutions
+
+        :raises NotImplementedError:
+        """
         raise NotImplementedError()
 
-    def remove_parameter(self, rate):
+    def remove_parameter(self, rate: str, strict: bool = True):
+        """
+        Remove a parameter from the model.
+
+        This method removes the parameter from the dictionary, self.parameters, and from the default parameter substitution dictionary (if it's there). If strict is True, a RuntimeError is raised if there is an attempt to remove a non-existant parameter.
+
+        :param strict: If True, do not allow non-existant parameters to be removed
+        """
+
+        if strict and rate not in self.parameters:
+            raise RuntimeError(f"Tried to remove parameter {rate} but it doesn't exist in the model")
+
         if rate in self.parameter_subs_dict:
             self.parameter_subs_dict.pop(rate)
 
         if rate in self.parameters:
             self.parameters.pop(rate)
 
-    def remove_state(self, state):
-        self.graph.remove_node(state)
+    def remove_state(self, state: str, strict: bool = True):
+        """
+        Remove a state from the model.
+
+        Removes some chemical species (i.e. a protein, dimer, or promoter state) from the model. If strict is True, an error is thrown if there is an attempt to remove a non-existant state.
+
+        :param state: The state to remove
+        :param strict: If True, the 
+        """
+
+        node_list = list(self.graph.nodes())
+
+        if strict and state not in node_list:
+            raise RuntimeError(f"Tried to remove state {state} but it doesn't exist in the model")
+
+        if state in node_list:
+            self.graph.remove_node(state)
 
         if state in self.promoter_symbols:
             self.promoter_symbols.remove(state)
@@ -951,7 +996,16 @@ class auxin_signalling_pathway():
 
         self._reactions_set = set(reaction_set_list)
 
-    def generate_myokit_model(self, name="", eliminate_promoter_state=''):
+    def generate_myokit_model(self, name: str = "",
+                              eliminate_promoter_state: str = ""):
+        """
+        Generate myokit code for the model. This method is unimplemented
+
+        :param name: A label for the created myokit model
+        :eliminate_promoter_state: The state to be eliminated from the promoter component of the model (str)
+
+        :raises: NotImplementedError
+        """
 
         if not name:
             name = self.__class__.__name__
@@ -1007,6 +1061,12 @@ class auxin_signalling_pathway():
         return model
 
     def get_model_name(self):
+        """
+        Compute a name for the model which includes the parameters used to create it
+
+        :returns: A string describing the model
+        """
+
         name = f"{self.__class__.__name__}_{self.nARFs}_ARFs_{self.nIAAs}_IAAs"
         if self.include_arf_transcription:
             name += "_with_arf_transcription"
@@ -1092,6 +1152,7 @@ class auxin_signalling_pathway():
     @classmethod
     def pretty_print_parameter(cls, par):
         """
+        Print a parameter in a LaTeX math format.
 
         :param par: The parameter label to convert
 
