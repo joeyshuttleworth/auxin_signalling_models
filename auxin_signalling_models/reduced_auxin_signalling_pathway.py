@@ -13,8 +13,9 @@ from auxin_signalling_models import auxin_signalling_pathway
 class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
     def __init__(self, nARFs: int = 1, nIAAs: int = 1, aux_func: Callable[[float], float] = None, simple_promoter_states: bool = False,
                  **kwargs):
-        """
-        A simplified version of a auxin_signalling_pathway model, with promoter-protein dynamics simplified with a quasi steady-state assumption
+        """A simplified version of a auxin_signalling_pathway model, with
+        promoter-protein dynamics simplified with a quasi steady-state
+        assumption.
 
         Additionally, all ARF translation rates are assumed to be equal, as are Aux/IAA translation rates. Optionally, the model can be further simplified by removing states and reactions where the promoter is bound to a monomer
 
@@ -68,21 +69,23 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
     def generate_ode_system(self, reduced: bool = True, do_QSS_sub: bool = True,
                             parameter_subs_dict: List = None, **kwargs):
-        """Generate a list of sympy expressions comprising an ODE system
+        """Generate a list of sympy expressions comprising an ODE system.
 
-        :param parameter_subs_dict: a dictionary of parameter substitutions
-        :param reduced: If true, return a system using a quasi steady-state assumption for protein-promoter dynamics
-        :param do_QSS_sub: If True, simplify the model using the promoter-protein quasi steady-state assumption
-
-        :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
-        the auxin concentration, a dictionary of parameters, and a list of
-        constraints (sympy Expressions)
+        :param parameter_subs_dict: a dictionary of parameter
+            substitutions
+        :param reduced: If true, return a system using a quasi steady-
+            state assumption for protein-promoter dynamics
+        :param do_QSS_sub: If True, simplify the model using the
+            promoter-protein quasi steady-state assumption
+        :returns: A tuple: the list of ODEs, a list of "free variables"
+            e.g. the auxin concentration, a dictionary of parameters,
+            and a list of constraints (sympy Expressions)
         """
 
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict
 
-        odes, free_variables, parameters, constraints = \
+        odes, free_variables, parameters, constraints =\
             super().generate_ode_system(state_variables=super().get_state_variables(),
                                         parameter_subs_dict=parameter_subs_dict,
                                         **kwargs)
@@ -125,14 +128,13 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return odes, free_variables, parameters, constraints
 
     def get_default_initial_conditions(self):
-        """
-        Crete a dictionary of state variables and corresponding initial conditions
+        """Crete a dictionary of state variables and corresponding initial
+        conditions.
 
-        :param parameter_subs_dict: Optinal dictionary of parameter substitutions to perform
-
-        :returns: a dictionary with a key for each state variable corresponding
-        to various default initial conidtions
-
+        :param parameter_subs_dict: Optinal dictionary of parameter
+            substitutions to perform
+        :returns: a dictionary with a key for each state variable
+            corresponding to various default initial conidtions
         """
 
         all_ic = super().get_default_initial_conditions()
@@ -147,12 +149,11 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return {k: ret_dict[k] for k in sorted(list(ret_dict.keys()))}
 
     def get_state_variables(self, include_promoter_vars=False, parameter_subs_dict=None):
-        """ Construct a list of the model's state variables
+        """Construct a list of the model's state variables.
 
         :returns: a list of the model's state variables, sorted in
-        alphabetical order, and excluding the empty-set node, and the auxin
-        concentration
-
+            alphabetical order, and excluding the empty-set node, and
+            the auxin concentration
         """
 
         state_vars = super().get_state_variables(
@@ -167,14 +168,14 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
                             and s != self.aux_symbol]))
 
     def make_cfunc_rhs(self, aux_func: Callable[[float], float] = None, parameter_subs_dict: dict = None):
-        """Generate a c function which evaluates the RHS of the ODE system
+        """Generate a c function which evaluates the RHS of the ODE system.
 
-        :param aux_func: An optional, externally defined auxin-input function
-        :param parameter_subs_dict: A dictionary of parameter substitutions
-
-        :returns: a c function with signature lsoda_sig for use solving our ODE
-        system
-
+        :param aux_func: An optional, externally defined auxin-input
+            function
+        :param parameter_subs_dict: A dictionary of parameter
+            substitutions
+        :returns: a c function with signature lsoda_sig for use solving
+            our ODE system
         """
 
         if parameter_subs_dict is None:
@@ -191,7 +192,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         promoter_expr_jac_func, inhomog_expr_func = self.get_promoter_ode_funcs(
             parameter_subs_dict=parameter_subs_dict)
 
-        odes, free_variables, parameters, constraints = \
+        odes, free_variables, parameters, constraints =\
             self.generate_ode_system(reduced=True,
                                      parameter_subs_dict=parameter_subs_dict)
         n_y = len(odes)
@@ -236,18 +237,19 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return cfunc_rhs
 
     def output_latex(self, **kwargs):
-        """
-        Construct a LaTeX string describing the model mathematically
+        """Construct a LaTeX string describing the model mathematically.
 
-        :returns: A string containg a LaTeX equations for each of the models state variables
+        :returns: A string containg a LaTeX equations for each of the
+            models state variables
         """
 
         return super().output_latex(reduced=True, **kwargs)
 
     def get_promoter_ode_funcs(self, parameter_subs_dict=None,
                                njitted=True):
-        """
-        Construct two functions used to compute the solution to the promoter-protein component of the model under a quasi steady-state assumption
+        """Construct two functions used to compute the solution to the
+        promoter-protein component of the model under a quasi steady-state
+        assumption.
 
         :param parameter_subs_dict: A dictionary of parameter substitutions
         :param njitted: If True, use numba to return JIT-compiled functions
@@ -255,7 +257,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         :return: 2-tuple - an expression for the jacobian of the derivative function, and an expression for the inhomogenous part
         """
 
-        odes, free_variables, _, constraints = \
+        odes, free_variables, _, constraints =\
             self.generate_ode_system(reduced=True,
                                      parameter_subs_dict=parameter_subs_dict)
 
@@ -298,19 +300,22 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return promoter_expr_jac_func, inhomog_expr_func
 
     def get_promoter_expr(self, parameter_subs_dict=None, use_cse=True):
-        """
-        Generate a sympy expression for the time-derivative of the promoter component of the model under a quasi steady-state assumption
+        """Generate a sympy expression for the time-derivative of the promoter
+        component of the model under a quasi steady-state assumption.
 
-        :param parameter_subs_dict: A dictionary of parameter substitutions
-        :param use_cse: If True, use sympy common sub-expressions to simplify the returned expressions
-
-        :return: A sympy expression for promoter dynamics (ODE), or if use_cse is True, equivalent lists of substitutions and expressions
+        :param parameter_subs_dict: A dictionary of parameter
+            substitutions
+        :param use_cse: If True, use sympy common sub-expressions to
+            simplify the returned expressions
+        :return: A sympy expression for promoter dynamics (ODE), or if
+            use_cse is True, equivalent lists of substitutions and
+            expressions
         """
 
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict
 
-        odes, free_variables, parameters, constraints = \
+        odes, free_variables, parameters, constraints =\
             self.generate_ode_system(reduced=True,
                                      parameter_subs_dict=parameter_subs_dict)
 
@@ -345,19 +350,21 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             return promoter_expr
 
     def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
-        odes, free_variables, parameters, \
+        odes, free_variables, parameters,\
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
-        """
-        Generate a derivative function for the model
+        """Generate a derivative function for the model.
 
-        Note that the returned function treats promoter variables as a separate argument.
+        Note that the returned function treats promoter variables as a
+        separate argument.
 
-        :param njitted: If true, use numba to JIT-compile the returned function
-        :param parameter_subs_dict: A dictionary of parameter substitutions
-
-        :returns: A derivative function for the model with parameters for the models state variables, parameters, free variables, and promoter states
-
+        :param njitted: If true, use numba to JIT-compile the returned
+            function
+        :param parameter_subs_dict: A dictionary of parameter
+            substitutions
+        :returns: A derivative function for the model with parameters
+            for the models state variables, parameters, free variables,
+            and promoter states
         """
 
         #  Create column vector of ode expressions
@@ -383,8 +390,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return _rhs_func
 
     def get_promoter_state_vars(self, *args, **kwargs):
-        """
-        List and sort the promoter state variables found in the model
+        """List and sort the promoter state variables found in the model.
 
         :return: Sorted list of promoter state variables
         """
@@ -394,15 +400,15 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return sorted([s for s in all_states if s not in state_vars])
 
     def get_promoter_steady_state_expr(self, parameter_subs_dict=None):
-        """
-        Make a sympy expression giving quasi steady state promoter variables given values for all other state variables
+        """Make a sympy expression giving quasi steady state promoter variables
+        given values for all other state variables.
 
-        :param parameter_subs_dict: A dictionary of parameter substitutions
-
+        :param parameter_subs_dict: A dictionary of parameter
+            substitutions
         :return: A sympy expression for the promoter quasi steady state
         """
 
-        odes, free_variables, parameters, \
+        odes, free_variables, parameters,\
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
 
@@ -424,7 +430,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
     def get_promoter_ss_func(self, parameter_subs_dict=None, njitted=False):
 
-        odes, free_variables, parameters, constraints = \
+        odes, free_variables, parameters, constraints =\
             self.generate_ode_system(reduced=True,
                                      parameter_subs_dict=parameter_subs_dict)
         ss_expr = self.get_promoter_steady_state_expr(parameter_subs_dict)
@@ -439,13 +445,14 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return func
 
     def get_jacobian_expr(self, parameter_subs_dict=None):
-        """
-        Construct a sympy expression for the jacobian of the modes' derivative function (excluding promoter variables)
+        """Construct a sympy expression for the jacobian of the modes'
+        derivative function (excluding promoter variables).
 
-        :return: A sympy Matrix for the jacobian of the models derivative
+        :return: A sympy Matrix for the jacobian of the models
+            derivative
         """
 
-        odes, free_variables, parameters, \
+        odes, free_variables, parameters,\
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
         promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
@@ -471,17 +478,19 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
     def output_julia(self, aux_func_name: str = "", aux_func_params: List = [],
                      parameter_subs_dict: dict = None):
-        """
-        Generate julia code describing the model including the quasi steady-state assumption
+        """Generate julia code describing the model including the quasi steady-
+        state assumption.
 
-        :param aux_func_name: A julia function name for an externally defined auxin-input signal
-        :param aux_func_params: Optional parameters to include for the auxin input function
-        :param parameter_subs_dict: A dictionary of parameter substitutions
-
+        :param aux_func_name: A julia function name for an externally
+            defined auxin-input signal
+        :param aux_func_params: Optional parameters to include for the
+            auxin input function
+        :param parameter_subs_dict: A dictionary of parameter
+            substitutions
         :returns: A string contianing a julia function definition
         """
 
-        odes, free_variables, parameters, \
+        odes, free_variables, parameters,\
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
 
@@ -496,10 +505,10 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         code_str += "\t(" + ", ".join(state_vars) + ") = z\n\n"
 
         if not aux_func_name:
-            code_str += "\t(" + ", ".join(list(default_parameters.keys()) + aux_func_params) + ", " + \
+            code_str += "\t(" + ", ".join(list(default_parameters.keys()) + aux_func_params) + ", " +\
                 f"{self.aux_symbol}) = p\n\n"
         else:
-            code_str += "\t(" + \
+            code_str += "\t(" +\
                 ", ".join(sorted(list(default_parameters.keys())) + aux_func_params)\
                 + ") = p\n\n"
             code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(
@@ -511,7 +520,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         for r, expr in replacements:
             code_str += f"\t{r} = {julia_code(expr)}" + "\n"
 
-        code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " + \
+        code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " +\
             julia_code(expressions[0]) + "\n\n"
 
         code_str += f"\t {promoter_vars[0]} = " \
@@ -525,7 +534,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
     def generate_jacobian_func(self, njitted=False, parameter_subs_dict=None):
         jac_expr = self.get_jacobian_expr()
 
-        odes, free_variables, parameters, \
+        odes, free_variables, parameters,\
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
 
@@ -542,8 +551,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         return jac_func
 
     def generate_myokit_model(self, *args, **kwargs):
-        """
-        Generate myokit code for the model. This method is unimplemented
+        """Generate myokit code for the model.
+
+        This method is unimplemented
 
         :raises: NotImplementedError
         """
@@ -552,13 +562,12 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         )
 
     def simplify_expr(self, expr):
-        """
-        Simplify a given expression found in the model.
+        """Simplify a given expression found in the model.
 
-        A method for expression simplification may be implemented in future
+        A method for expression simplification may be implemented in
+        future
 
         :param expr: The expression to be simplified
-
         :return: The same expression
         """
 

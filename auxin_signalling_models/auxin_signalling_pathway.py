@@ -15,11 +15,11 @@ from sympy.printing.julia import julia_code
 from .reaction import Reaction
 
 
-class auxin_signalling_pathway():
+class auxin_signalling_pathway:
     def __init__(self, nARFs: int = 1, nIAAs: int = 1, include_arf_transcription: bool = False,
                  aux_func: Callable[[float], float] = None):
-        """
-        A graph-based representation of an auxin-signalling pathway in terms of chemical reactions and chemical species
+        """A graph-based representation of an auxin-signalling pathway in terms
+        of chemical reactions and chemical species.
 
         The model is described in terms of:
         - auxin_signalling_pathway.graph where the nodes are various protein complexes, hormones and promoter states, and the edges are Reaction objects describing a particular chemical reaction
@@ -280,17 +280,19 @@ class auxin_signalling_pathway():
 
     def add_model_parameter(self, label: str, default_value: float = 0.0,
                             description: str = "", strict: bool = True):
-        """
-        Add a new parameter to the model
+        """Add a new parameter to the model.
 
-        :param label: Label to use for the new parameter. Should be a valid Sympy symbol
-        :param default_value: Default value for the newly added parameter
+        :param label: Label to use for the new parameter. Should be a
+            valid Sympy symbol
+        :param default_value: Default value for the newly added
+            parameter
         :param description: Short description of the new model parameter
-        :param strict: If False, overwrite an existing parameter of the same name
-
-        :raises ValueError: When strict is True and a parameter with the same label already exists
-        :raises ValueError: When label isn't a valid Python variable identifier
-
+        :param strict: If False, overwrite an existing parameter of the
+            same name
+        :raises ValueError: When strict is True and a parameter with the
+            same label already exists
+        :raises ValueError: When label isn't a valid Python variable
+            identifier
         """
 
         label = str(label)
@@ -311,14 +313,16 @@ class auxin_signalling_pathway():
         self.parameters[label] = (default_value, description)
 
     def add_state(self, label, category=None, strict=True):
-        """
-        Add a state variable to the model e.g. a monomer, dimer or other chemical species.
+        """Add a state variable to the model e.g. a monomer, dimer or other
+        chemical species.
 
         :param label: Label for the new state variable
-        :param category: Optional category field for the new state variable e.g ARF, Aux/IAA, or promoter
-        :param strict: If True an exception is thrown when a state variable of the same name already exists in the model
-
-        :raises ValueError: When strict is True and a duplicate state-variable is added
+        :param category: Optional category field for the new state
+            variable e.g ARF, Aux/IAA, or promoter
+        :param strict: If True an exception is thrown when a state
+            variable of the same name already exists in the model
+        :raises ValueError: When strict is True and a duplicate state-
+            variable is added
         """
 
         label = str(label)
@@ -332,24 +336,23 @@ class auxin_signalling_pathway():
     def add_reaction(self, reactants=[], products=[], fwd_rates=[],
                      bwd_rates=[], enzymes=[], add_states=False, strict=None,
                      reaction_type='linear'):
-        """Add a chemical reaction to the model. Reactions are stored in self.graph
+        """Add a chemical reaction to the model.
+
+        Reactions are stored in self.graph
 
         :param reactants: the reactants of the reaction
-        :param products: the products of the reaction (cannot be empty or None)
-        :param fwd_rates: parameters associated with the forwards reaction
-        (reactants -> products)
+        :param products: the products of the reaction (cannot be empty
+            or None)
+        :param fwd_rates: parameters associated with the forwards
+            reaction (reactants -> products)
         :param bwd_rates: parameters associated with the reverse
-        reaction (products->reactants)
-        :param enzymes: other state variables that contribute
-        to the reaction
-        but aren't consumed
-        :param add_states: boolean flag, if true missing
-        states are added to the model
-        :param strict: Boolean flag, if true, an exception is thrown
-        if any of the state variables are missing from the model
-
-        @return None
-
+            reaction (products->reactants)
+        :param enzymes: other state variables that contribute to the
+            reaction but aren't consumed
+        :param add_states: boolean flag, if true missing states are
+            added to the model
+        :param strict: Boolean flag, if true, an exception is thrown if
+            any of the state variables are missing from the model
         """
 
         reactants = tuple([str(r) for r in reactants])
@@ -449,16 +452,17 @@ class auxin_signalling_pathway():
                     )
 
     def _get_reaction_terms(self, reaction, variable):
-        """Get a term for the ODE formulation of a model from a particular reaction
+        """Get a term for the ODE formulation of a model from a particular
+        reaction.
 
         This function is used to generate an ODE system describing the
         time-evoluation of the model
 
         :param reaction: a Reaction describing the reaction of interest
-        :param variable: the state variable for which terms are being generated
-
-        :returns: a list of sympy expressions resulting from the reaction
-
+        :param variable: the state variable for which terms are being
+            generated
+        :returns: a list of sympy expressions resulting from the
+            reaction
         """
         terms = [sp.sympify('0')]
 
@@ -503,10 +507,10 @@ class auxin_signalling_pathway():
             raise NotImplementedError("")
 
     def get_reactions_set(self):
-        """
-        Get a list of all of the chemical reactions defined in the model
+        """Get a list of all of the chemical reactions defined in the model.
 
-        Chemical reactions are stored as auxin_signalling_models.Reaction objects
+        Chemical reactions are stored as
+        auxin_signalling_models.Reaction objects
 
         :returns: reaction_set
         """
@@ -515,15 +519,15 @@ class auxin_signalling_pathway():
 
     def generate_ode_system(self, parameter_subs_dict: dict = None,
                             state_variables: List = None):
-        """Generate a list of sympy expressions comprising an ODE system
+        """Generate a list of sympy expressions comprising an ODE system.
 
-        :params parameter_subs_dict: a dictionary of parameter substitutions
-        :param state_variables: Optional list of state variables defining the ordering of state variables in the model
-
-        :returns: A tuple: the list of ODEs, a list of "free variables" e.g.
-        the auxin concentration, a dictionary of parameters, and a list of
-        constraints (sympy Expressions)
-
+        :params parameter_subs_dict: a dictionary of parameter
+            substitutions
+        :param state_variables: Optional list of state variables
+            defining the ordering of state variables in the model
+        :returns: A tuple: the list of ODEs, a list of "free variables"
+            e.g. the auxin concentration, a dictionary of parameters,
+            and a list of constraints (sympy Expressions)
         """
 
         if parameter_subs_dict is None:
@@ -561,12 +565,11 @@ class auxin_signalling_pathway():
         return odes, free_variables, parameters, constraints
 
     def get_state_variables(self, parameter_subs_dict=None):
-        """ Construct a list of the model's state variables
+        """Construct a list of the model's state variables.
 
         :returns: a list of the model's state variables, sorted in
-        alphabetical order, and excluding the empty-set node, and the auxin
-        concentration
-
+            alphabetical order, and excluding the empty-set node, and
+            the auxin concentration
         """
         state_vars = list([str(s) for s in self.graph.nodes()
                            if s != self.empty_set_node
@@ -579,11 +582,11 @@ class auxin_signalling_pathway():
         return sorted(state_vars)
 
     def make_forward_solver(self, parameter_subs_dict=None):
-        """Generate a function which simulates the model
+        """Generate a function which simulates the model.
 
-        :returns: a function returning model output under different times,
-        parameter values, initial conditions and auxin concentrations
-
+        :returns: a function returning model output under different
+            times, parameter values, initial conditions and auxin
+            concentrations
         """
 
         cfunc = self.make_cfunc_rhs(parameter_subs_dict=parameter_subs_dict)
@@ -649,11 +652,10 @@ class auxin_signalling_pathway():
         return self.cfunc_rhs
 
     def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict=None):
-        """Generate a c function which evaluates the RHS of the ODE system
+        """Generate a c function which evaluates the RHS of the ODE system.
 
-        :returns: a c function with signature lsoda_sig for use solving our ODE
-        system
-
+        :returns: a c function with signature lsoda_sig for use solving
+            our ODE system
         """
 
         n_y = len(self.get_state_variables())
@@ -687,7 +689,7 @@ class auxin_signalling_pathway():
         return cfunc_rhs
 
     def generate_jacobian_func(self, njitted=True):
-        odes, free_variables, _, \
+        odes, free_variables, _,\
             _ = self.generate_ode_system()
 
         #  Create column vector of ode expressions
@@ -723,7 +725,7 @@ class auxin_signalling_pathway():
             return self.generate_jacobian_func()
 
     def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
-        odes, free_variables, parameters, \
+        odes, free_variables, parameters,\
             _ = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
 
@@ -749,14 +751,13 @@ class auxin_signalling_pathway():
         return rhs_func
 
     def get_default_initial_conditions(self, parameter_subs_dict=None):
-        """
-        Create a dictionary of state variables and corresponding initial conditions
+        """Create a dictionary of state variables and corresponding initial
+        conditions.
 
-        :param parameter_subs_dict: Optinal dictionary of parameter substitutions to perform
-
-        :returns: a dictionary with a key for each state variable corresponding
-        to various default initial conidtions
-
+        :param parameter_subs_dict: Optinal dictionary of parameter
+            substitutions to perform
+        :returns: a dictionary with a key for each state variable
+            corresponding to various default initial conidtions
         """
 
         state_vars = self.get_state_variables(
@@ -777,7 +778,7 @@ class auxin_signalling_pathway():
         return ic_dict
 
     def get_default_parameters(self, parameter_subs_dict=None):
-        """ Return a default parameter set
+        """Return a default parameter set.
 
         :return: a dictionary of parameter values
         """
@@ -797,7 +798,7 @@ class auxin_signalling_pathway():
         return param_dict
 
     def draw_graph(self, output_path=None, **kwargs):
-        """ Output a graph of the model using networkx and pygraphvis
+        """Output a graph of the model using networkx and pygraphvis.
 
         :param output_path: an optional path for outputting the diagram
         """
@@ -854,24 +855,24 @@ class auxin_signalling_pathway():
             network.show(output_path, notebook=False)
 
     def output_latex(self, **kwargs):
-        """
-        Construct a LaTeX string describing the model mathematically
+        """Construct a LaTeX string describing the model mathematically.
 
-        :returns: A string containg a LaTeX equations for each of the models state variables
+        :returns: A string containg a LaTeX equations for each of the
+            models state variables
         """
 
-        odes, free_variables, parameters, \
+        odes, free_variables, parameters,\
             constraints = self.generate_ode_system(**kwargs)
 
         subs_dict = {}
 
         letters = ['U', 'V', 'W', 'X', 'Y', 'Z',]
-        for arf, l in zip(self.arf_symbols, letters):
-            subs_dict[arf] = l
+        for arf, lab in zip(self.arf_symbols, letters):
+            subs_dict[arf] = lab
 
         letters = ['u', 'v', 'w', 'x', 'y', 'z',]
-        for iaa, l in zip(self.iaa_symbols, letters):
-            subs_dict[iaa] = l
+        for iaa, lab in zip(self.iaa_symbols, letters):
+            subs_dict[iaa] = lab
 
         for d in self.dimer_symbols:
             components = d.split('__')[1:]
@@ -889,17 +890,19 @@ class auxin_signalling_pathway():
 
     def output_julia(self, aux_func_name="", aux_func_params=[],
                      parameter_subs_dict=None):
-        """
-        Generate julia code describing the model including the quasi steady-state assumption
+        """Generate julia code describing the model including the quasi steady-
+        state assumption.
 
-        :param aux_func_name: A julia function name for an externally defined auxin-input signal
-        :param aux_func_params: Optional parameters to include for the auxin input function
-        :param parameter_subs_dict: A dictionary of parameter substitutions
-
+        :param aux_func_name: A julia function name for an externally
+            defined auxin-input signal
+        :param aux_func_params: Optional parameters to include for the
+            auxin input function
+        :param parameter_subs_dict: A dictionary of parameter
+            substitutions
         :returns: A string contianing a julia function definition
         """
 
-        odes, free_variables, parameters, \
+        odes, free_variables, parameters,\
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
 
@@ -912,10 +915,10 @@ class auxin_signalling_pathway():
         code_str += "\t(" + ", ".join(state_vars) + ") = z\n\n"
 
         if not aux_func_name:
-            code_str += "\t(" + ", ".join(list(default_parameters.keys()) + aux_func_params) + ", " + \
+            code_str += "\t(" + ", ".join(list(default_parameters.keys()) + aux_func_params) + ", " +\
                 f"{self.aux_symbol}) = p\n\n"
         else:
-            code_str += "\t(" + \
+            code_str += "\t(" +\
                 ", ".join(sorted(list(default_parameters.keys())) + aux_func_params)\
                 + ") = p\n\n"
             code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(
@@ -927,24 +930,27 @@ class auxin_signalling_pathway():
         return code_str
 
     def get_jacobian_expr(self, parameter_subs_dict=None):
-        """
-        Symbolically the jacobian of the model's derivative function
+        """Symbolically the jacobian of the model's derivative function.
 
         Not implemented
 
-        :param parameter_subs_dict: Dictionary of parameter substitutions
-
+        :param parameter_subs_dict: Dictionary of parameter
+            substitutions
         :raises NotImplementedError:
         """
         raise NotImplementedError()
 
     def remove_parameter(self, rate: str, strict: bool = True):
-        """
-        Remove a parameter from the model.
+        """Remove a parameter from the model.
 
-        This method removes the parameter from the dictionary, self.parameters, and from the default parameter substitution dictionary (if it's there). If strict is True, a RuntimeError is raised if there is an attempt to remove a non-existant parameter.
+        This method removes the parameter from the dictionary,
+        self.parameters, and from the default parameter substitution
+        dictionary (if it's there). If strict is True, a RuntimeError is
+        raised if there is an attempt to remove a non-existant
+        parameter.
 
-        :param strict: If True, do not allow non-existant parameters to be removed
+        :param strict: If True, do not allow non-existant parameters to
+            be removed
         """
 
         if strict and rate not in self.parameters:
@@ -957,13 +963,14 @@ class auxin_signalling_pathway():
             self.parameters.pop(rate)
 
     def remove_state(self, state: str, strict: bool = True):
-        """
-        Remove a state from the model.
+        """Remove a state from the model.
 
-        Removes some chemical species (i.e. a protein, dimer, or promoter state) from the model. If strict is True, an error is thrown if there is an attempt to remove a non-existant state.
+        Removes some chemical species (i.e. a protein, dimer, or
+        promoter state) from the model. If strict is True, an error is
+        thrown if there is an attempt to remove a non-existant state.
 
         :param state: The state to remove
-        :param strict: If True, the 
+        :param strict: If True, the
         """
 
         node_list = list(self.graph.nodes())
@@ -990,7 +997,7 @@ class auxin_signalling_pathway():
 
         # Remove any reaction that includes this state, also
         for reaction in self._reactions_set:
-            if state not in list(reaction.products) + list(reaction.reactants) \
+            if state not in list(reaction.products) + list(reaction.reactants)\
                + list(reaction.enzymes):
                 reaction_set_list.append(reaction)
 
@@ -998,12 +1005,13 @@ class auxin_signalling_pathway():
 
     def generate_myokit_model(self, name: str = "",
                               eliminate_promoter_state: str = ""):
-        """
-        Generate myokit code for the model. This method is unimplemented
+        """Generate myokit code for the model.
+
+        This method is unimplemented
 
         :param name: A label for the created myokit model
-        :eliminate_promoter_state: The state to be eliminated from the promoter component of the model (str)
-
+            :eliminate_promoter_state: The state to be eliminated from
+            the promoter component of the model (str)
         :raises: NotImplementedError
         """
 
@@ -1061,8 +1069,8 @@ class auxin_signalling_pathway():
         return model
 
     def get_model_name(self):
-        """
-        Compute a name for the model which includes the parameters used to create it
+        """Compute a name for the model which includes the parameters used to
+        create it.
 
         :returns: A string describing the model
         """
@@ -1073,13 +1081,13 @@ class auxin_signalling_pathway():
         return name
 
     def set_parameter_substitution_dict(self, param_subs_dict, strict=False):
-        """
-        Define a dictionary of parameter substitutions to use in the model.
+        """Define a dictionary of parameter substitutions to use in the model.
 
         :param parameter_subs_dict:
-        :param strict: If true, don't allow parameters to be substituted with undefined symbols
-
-        :raises ValueError: When a parameter found in the substitution dict isn't found in the model and strict is True
+        :param strict: If true, don't allow parameters to be substituted
+            with undefined symbols
+        :raises ValueError: When a parameter found in the substitution
+            dict isn't found in the model and strict is True
         """
 
         if not strict:
@@ -1107,8 +1115,8 @@ class auxin_signalling_pathway():
         self.parameter_subs_dict = param_subs_dict
 
     def get_promoter_parameters(self):
-        """
-        Construct a list of model parameters which relate to the protein-promoter dynamics in the model
+        """Construct a list of model parameters which relate to the protein-
+        promoter dynamics in the model.
 
         :returns: A list of parameters
         """
@@ -1129,8 +1137,7 @@ class auxin_signalling_pathway():
         return pp_params
 
     def get_parameter_substitution_dict(self):
-        """
-        Return the models dictionary of parameter substitutions.
+        """Return the models dictionary of parameter substitutions.
 
         :returns: a sorted dictionary of parameter substitutions
         """
@@ -1138,8 +1145,7 @@ class auxin_signalling_pathway():
         return _sorted_dict(self.parameter_substitution_dict)
 
     def pretty_print_parameter_dict(self):
-        """
-        Print all model parameters in a LaTeX-maths format
+        """Print all model parameters in a LaTeX-maths format.
 
         :returns: Dictionary of parameter labels in a LaTeX maths format
         """
@@ -1151,11 +1157,9 @@ class auxin_signalling_pathway():
 
     @classmethod
     def pretty_print_parameter(cls, par):
-        """
-        Print a parameter in a LaTeX math format.
+        """Print a parameter in a LaTeX math format.
 
         :param par: The parameter label to convert
-
         :returns: A LaTeX-maths string
         """
         parts = par.split("__")
@@ -1167,14 +1171,14 @@ class auxin_signalling_pathway():
 
 
 def _sorted_dict(_dict):
-    """
-    Returns a dictionary where the keys are sorted (i.e. alphabetically)
+    """Returns a dictionary where the keys are sorted (i.e. alphabetically).
 
-    Note that this is only guaranteed to work for Python>=3.7 where insertion order is respected
+    Note that this is only guaranteed to work for Python>=3.7 where
+    insertion order is respected
 
     :param _dict: A dictionary to be sorted
-
-    :returns: A dictionary with the same keys and values but sorted by key
+    :returns: A dictionary with the same keys and values but sorted by
+        key
     """
 
     #  Insertion order is respected in Python>=3.7
