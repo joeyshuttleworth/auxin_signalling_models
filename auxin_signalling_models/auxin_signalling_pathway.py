@@ -333,8 +333,10 @@ class auxin_signalling_pathway:
 
         self.graph.add_node(label, category=category)
 
-    def add_reaction(self, reactants=[], products=[], fwd_rates=[],
-                     bwd_rates=[], enzymes=[], add_states=False, strict=None,
+    def add_reaction(self, reactants: List[str] = [], products: List[str] = [],
+                     fwd_rates: List[str] = [],
+                     bwd_rates:List [str] = [], enzymes: List[str] = [],
+                     add_states: bool = False, strict: bool = None,
                      reaction_type='linear'):
         """Add a chemical reaction to the model.
 
@@ -451,7 +453,7 @@ class auxin_signalling_pathway:
                         category='enzymatic'
                     )
 
-    def _get_reaction_terms(self, reaction, variable):
+    def _get_reaction_terms(self, reaction: Reaction, variable: str):
         """Get a term for the ODE formulation of a model from a particular
         reaction.
 
@@ -518,7 +520,7 @@ class auxin_signalling_pathway:
         return self._reactions_set
 
     def generate_ode_system(self, parameter_subs_dict: dict = None,
-                            state_variables: List = None):
+                            state_variables: List[str] = None):
         """Generate a list of sympy expressions comprising an ODE system.
 
         :params parameter_subs_dict: a dictionary of parameter
@@ -564,7 +566,7 @@ class auxin_signalling_pathway:
 
         return odes, free_variables, parameters, constraints
 
-    def get_state_variables(self, parameter_subs_dict=None):
+    def get_state_variables(self, parameter_subs_dict: dict = None):
         """Construct a list of the model's state variables.
 
         :returns: a list of the model's state variables, sorted in
@@ -581,7 +583,7 @@ class auxin_signalling_pathway:
 
         return sorted(state_vars)
 
-    def make_forward_solver(self, parameter_subs_dict=None):
+    def make_forward_solver(self, parameter_subs_dict: dict = None):
         """Generate a function which simulates the model.
 
         :returns: a function returning model output under different
@@ -651,7 +653,8 @@ class auxin_signalling_pathway:
 
         return self.cfunc_rhs
 
-    def make_cfunc_rhs(self, aux_func=None, parameter_subs_dict=None):
+    def make_cfunc_rhs(self, aux_func: Callable[[float], float]=None,
+                       parameter_subs_dict: dict = None):
         """Generate a c function which evaluates the RHS of the ODE system.
 
         :returns: a c function with signature lsoda_sig for use solving
@@ -688,7 +691,7 @@ class auxin_signalling_pathway:
 
         return cfunc_rhs
 
-    def generate_jacobian_func(self, njitted=True):
+    def generate_jacobian_func(self, njitted: bool = True):
         odes, free_variables, _,\
             _ = self.generate_ode_system()
 
@@ -724,7 +727,7 @@ class auxin_signalling_pathway:
         else:
             return self.generate_jacobian_func()
 
-    def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
+    def generate_rhs_func(self, njitted: bool = True, parameter_subs_dict: dict = None):
         odes, free_variables, parameters,\
             _ = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
@@ -750,7 +753,7 @@ class auxin_signalling_pathway:
 
         return rhs_func
 
-    def get_default_initial_conditions(self, parameter_subs_dict=None):
+    def get_default_initial_conditions(self, parameter_subs_dict: dict = None):
         """Create a dictionary of state variables and corresponding initial
         conditions.
 
@@ -777,7 +780,7 @@ class auxin_signalling_pathway:
 
         return ic_dict
 
-    def get_default_parameters(self, parameter_subs_dict=None):
+    def get_default_parameters(self, parameter_subs_dict: dict = None):
         """Return a default parameter set.
 
         :return: a dictionary of parameter values
@@ -797,7 +800,7 @@ class auxin_signalling_pathway:
 
         return param_dict
 
-    def draw_graph(self, output_path=None, **kwargs):
+    def draw_graph(self, output_path: str = None, **kwargs):
         """Output a graph of the model using networkx and pygraphvis.
 
         :param output_path: an optional path for outputting the diagram
@@ -888,8 +891,8 @@ class auxin_signalling_pathway:
         odes = odes.subs(subs_dict)
         return sp.latex(odes)
 
-    def output_julia(self, aux_func_name="", aux_func_params=[],
-                     parameter_subs_dict=None):
+    def output_julia(self, aux_func_name: str = "", aux_func_params: List[str] = [],
+                     parameter_subs_dict: dict = None):
         """Generate julia code describing the model including the quasi steady-
         state assumption.
 
@@ -929,7 +932,7 @@ class auxin_signalling_pathway:
 
         return code_str
 
-    def get_jacobian_expr(self, parameter_subs_dict=None):
+    def get_jacobian_expr(self, parameter_subs_dict: dict = None):
         """Symbolically the jacobian of the model's derivative function.
 
         Not implemented
@@ -1080,7 +1083,7 @@ class auxin_signalling_pathway:
             name += "_with_arf_transcription"
         return name
 
-    def set_parameter_substitution_dict(self, param_subs_dict, strict=False):
+    def set_parameter_substitution_dict(self, param_subs_dict: dict, strict: bool = False):
         """Define a dictionary of parameter substitutions to use in the model.
 
         :param parameter_subs_dict:
@@ -1156,7 +1159,7 @@ class auxin_signalling_pathway:
         return ret_dict
 
     @classmethod
-    def pretty_print_parameter(cls, par):
+    def pretty_print_parameter(cls, par: str):
         """Print a parameter in a LaTeX math format.
 
         :param par: The parameter label to convert
@@ -1170,7 +1173,7 @@ class auxin_signalling_pathway:
         return f"{head}_{{{top}_{{{', '.join(rest)}}}}}"
 
 
-def _sorted_dict(_dict):
+def _sorted_dict(_dict: dict):
     """Returns a dictionary where the keys are sorted (i.e. alphabetically).
 
     Note that this is only guaranteed to work for Python>=3.7 where
