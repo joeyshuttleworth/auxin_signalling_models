@@ -74,4 +74,4 @@ Source = "https://github.com/joeyshuttleworth/auxin_signalling_models"
 skip = ["docs", "build", ".venv", "auxin_signalling_models/_version.py"]
 
 [tool.flake8]
-ignore = ["E501"]
+ignore = ["E501", "W503", "W504]
