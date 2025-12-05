@@ -329,7 +329,8 @@ class auxin_signalling_pathway:
 
         if strict and label in self.graph.nodes():
             raise ValueError(
-                f"Tried to add state {label} to the model but it already exists (strict=True)")
+                f"Tried to add state {label} to the model but it already exists (strict=True)"
+            )
 
         self.graph.add_node(label, category=category)
 
