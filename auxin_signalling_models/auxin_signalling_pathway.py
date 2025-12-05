@@ -335,7 +335,7 @@ class auxin_signalling_pathway:
 
     def add_reaction(self, reactants: List[str] = [], products: List[str] = [],
                      fwd_rates: List[str] = [],
-                     bwd_rates:List [str] = [], enzymes: List[str] = [],
+                     bwd_rates: List[str] = [], enzymes: List[str] = [],
                      add_states: bool = False, strict: bool = None,
                      reaction_type='linear'):
         """Add a chemical reaction to the model.
@@ -653,7 +653,7 @@ class auxin_signalling_pathway:
 
         return self.cfunc_rhs
 
-    def make_cfunc_rhs(self, aux_func: Callable[[float], float]=None,
+    def make_cfunc_rhs(self, aux_func: Callable[[float], float] = None,
                        parameter_subs_dict: dict = None):
         """Generate a c function which evaluates the RHS of the ODE system.
 
@@ -692,7 +692,7 @@ class auxin_signalling_pathway:
         return cfunc_rhs
 
     def generate_jacobian_func(self, njitted: bool = True):
-        odes, free_variables, _,\
+        odes, free_variables, _, \
             _ = self.generate_ode_system()
 
         #  Create column vector of ode expressions
@@ -728,7 +728,7 @@ class auxin_signalling_pathway:
             return self.generate_jacobian_func()
 
     def generate_rhs_func(self, njitted: bool = True, parameter_subs_dict: dict = None):
-        odes, free_variables, parameters,\
+        odes, free_variables, parameters, \
             _ = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
 
@@ -864,7 +864,7 @@ class auxin_signalling_pathway:
             models state variables
         """
 
-        odes, free_variables, parameters,\
+        odes, free_variables, parameters, \
             constraints = self.generate_ode_system(**kwargs)
 
         subs_dict = {}
@@ -905,7 +905,7 @@ class auxin_signalling_pathway:
         :returns: A string contianing a julia function definition
         """
 
-        odes, free_variables, parameters,\
+        odes, free_variables, parameters, \
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
 
@@ -957,7 +957,8 @@ class auxin_signalling_pathway:
         """
 
         if strict and rate not in self.parameters:
-            raise RuntimeError(f"Tried to remove parameter {rate} but it doesn't exist in the model")
+            raise RuntimeError(
+                f"Tried to remove parameter {rate} but it doesn't exist in the model")
 
         if rate in self.parameter_subs_dict:
             self.parameter_subs_dict.pop(rate)
@@ -979,7 +980,8 @@ class auxin_signalling_pathway:
         node_list = list(self.graph.nodes())
 
         if strict and state not in node_list:
-            raise RuntimeError(f"Tried to remove state {state} but it doesn't exist in the model")
+            raise RuntimeError(
+                f"Tried to remove state {state} but it doesn't exist in the model")
 
         if state in node_list:
             self.graph.remove_node(state)

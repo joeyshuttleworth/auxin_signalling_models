@@ -350,7 +350,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             return promoter_expr
 
     def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
-        odes, free_variables, parameters,\
+        odes, free_variables, parameters, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
         """Generate a derivative function for the model.
@@ -408,7 +408,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         :return: A sympy expression for the promoter quasi steady state
         """
 
-        odes, free_variables, parameters,\
+        odes, free_variables, parameters, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
 
@@ -452,7 +452,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             derivative
         """
 
-        odes, free_variables, parameters,\
+        odes, free_variables, parameters, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
         promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
@@ -490,7 +490,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         :returns: A string contianing a julia function definition
         """
 
-        odes, free_variables, parameters,\
+        odes, free_variables, parameters, \
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
 
@@ -534,7 +534,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
     def generate_jacobian_func(self, njitted=False, parameter_subs_dict=None):
         jac_expr = self.get_jacobian_expr()
 
-        odes, free_variables, parameters,\
+        odes, free_variables, parameters, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
 
