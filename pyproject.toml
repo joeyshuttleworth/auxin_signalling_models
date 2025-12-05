@@ -50,6 +50,11 @@ test = [
 	        'pyvis>=0.3.2'
       ]
 
+docs = [
+	"sphinx>=9.0.0",
+	"ruff>=0.14.7"
+	]
+
 [tools.setuptools.package-data]
 include_package_data = true
 
