@@ -35,7 +35,8 @@ dependencies = [
         'myokit>=1.38.0',
         'networkx>=3.4.2',
         'numba>=0.61.2',
-        'numbalsoda @ git+https://git@github.com/NicholasWogan/numbalsoda@c9183b5bc75002bac5270339f0e0ca645f102b4d'
+        'numbalsoda @ git+https://git@github.com/NicholasWogan/numbalsoda@c9183b5bc75002bac5270339f0e0ca645f102b4d',
+        "flake8-pyproject>=1.2.4"
 ]
 
 [project.optional-dependencies]
@@ -71,3 +72,6 @@ Source = "https://github.com/joeyshuttleworth/auxin_signalling_models"
 
 [tool.isort]
 skip = ["docs", "build", ".venv", "auxin_signalling_models/_version.py"]
+
+[tool.flake8]
+ignore = ["E501"]
