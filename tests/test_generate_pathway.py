@@ -56,14 +56,14 @@ class TestGeneratePathway(unittest.TestCase):
             logging.info(asp_model.generate_ode_system())
 
     def generate_solve_ode(self, asp_model, i):
-        odes, free_variables, transition_rates, constraints = \
+        odes, free_variables, parameters, constraints = \
             asp_model.generate_ode_system()
         with open(os.path.join(self.output_dir,
                                f"test_graph_{i}.txt"), 'w') as fout:
             fout.write(f"ODEs: {odes}\n")
             fout.write(f"constraints: {constraints}\n")
             fout.write(f"free variables: {free_variables}\n")
-            fout.write(f"transition rates: {transition_rates}\n")
+            fout.write(f"transition rates: {parameters}\n")
 
         ic_dict = asp_model.get_default_initial_conditions()
         param_dict = asp_model.get_default_parameters()
@@ -89,7 +89,7 @@ class TestGeneratePathway(unittest.TestCase):
                                               asp_model.iaa_symbols):
                 subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
 
-            for key, val in asp_model.transition_rates.items():
+            for key, val in asp_model.parameters.items():
                 if "bind" in key:
                     subs_dict[key] = 0.0
 
@@ -98,18 +98,18 @@ class TestGeneratePathway(unittest.TestCase):
                     for rna_symbol in asp_model.rna_symbols:
                         subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = 0.0
 
-            odes, free_variables, transition_rates, constraints \
+            odes, free_variables, parameters, constraints \
                 = asp_model.generate_ode_system(parameter_subs_dict=subs_dict)
 
-            logging.info(f"Transition rates: {transition_rates}")
+            logging.info(f"Transition rates: {parameters}")
             for k, v in subs_dict.items():
                 # If the value has been substituted with a constant (i.e. 0)
                 # skip this check
                 if sp.sympify(v).free_symbols:
-                    self.assertIn(v, list(transition_rates.keys()))
+                    self.assertIn(v, list(parameters.keys()))
                     self.assertIn(sp.sympify(v), odes.free_symbols)
 
-            logging.info(transition_rates)
+            logging.info(parameters)
 
     def test_output_latex(self):
         for i, kwargs in enumerate(self.kwargs_list):
@@ -140,9 +140,27 @@ class TestGeneratePathway(unittest.TestCase):
 
     def test_get_model_name(self):
         for kwargs in self.kwargs_list:
-            asp_model = asp_class()
+            asp_model = asp_class(**kwargs)
             name = asp_model.get_model_name()
             self.assertTrue(isinstance(name, str))
+
+    def test_print_parameters(self):
+        for i, kwargs in enumerate(self.kwargs_list):
+            asp_model = asp_class(**kwargs)
+
+            pretty_str = asp_model.pretty_print_parameter_dict()
+            self.assertTrue(isinstance(pretty_str, dict))
+
+            with open(os.path.join(self.output_dir, f"full_model_{i}_params.txt"), 'w') as fout:
+                fout.write(str(pretty_str))
+
+    def test_exception_bad_parameter_label(self):
+        asp_model = asp_class(**self.kwargs_list[0])
+        self.assertRaises(
+            ValueError,
+            lambda: asp_model.add_model_parameter(
+                "1/////this is a bad parameter parameter")
+        )
 
 
 if __name__ == "__main__":
