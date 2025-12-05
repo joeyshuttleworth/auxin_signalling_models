@@ -6,15 +6,16 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - name: checkout
+      uses: actions/checkout@v1
     - name: Install package
       run: pip install -e .
     - name: Build docs
-    - uses: ammaraskar/sphinx-action@7.0.0
+      uses: ammaraskar/sphinx-action@7.0.0
       with:
         docs-folder: "docs/"
     - name: Upload docs
-    - uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4
       with:
         name: DocumentationHTML
         path: docs/_build/html/
