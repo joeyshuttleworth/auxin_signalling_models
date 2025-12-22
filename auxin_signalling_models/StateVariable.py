@@ -1,0 +1,36 @@
+import sympy as sp
+import random
+import string
+
+from typing import Iterable
+from .Variable import Variable
+
+
+class StateVariable(Variable):
+
+    def __init__(self, *args,
+                 initial_condition: float = 1.0,
+                 components: Iterable = [],
+                 category: str = "None",
+                 **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.components = tuple(components)
+
+        self.category = category
+
+        self.initial_condition = initial_condition
+
+    def __key(self):
+        return (self.name, self.components)
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __str__(self):
+        dict = {"name": self.name,
+                "description": self.description,
+                "components": self.components}
+        return str(dict)
+

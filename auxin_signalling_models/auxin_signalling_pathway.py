@@ -1,18 +1,24 @@
 import logging
-from typing import Callable, List
+from typing import Callable, Iterable, List
 
+from copy import copy
 import myokit
 import networkx as nx
 import numba as nb
 import numpy as np
 import seaborn as sns
 import sympy as sp
+import pandas as pd
+
 from numba import cfunc, njit
 from numbalsoda import lsoda, lsoda_sig
 from pyvis.network import Network
 from sympy.printing.julia import julia_code
 
 from .reaction import Reaction
+from .Variable import Variable
+from .StateVariable import StateVariable
+from .Parameter import Parameter
 
 
 class auxin_signalling_pathway:
@@ -38,8 +44,8 @@ class auxin_signalling_pathway:
         self.QSS_bound_species = {}
         self.parameter_subs_dict = {}
 
-        # Dictionary storing tuples: label => description and default values
-        self.parameters = {}
+        # Stored as a set of Variable objects
+        self._parameters = set()
 
         self.nARFs = nARFs
         self.nIAAs = nIAAs
@@ -48,78 +54,99 @@ class auxin_signalling_pathway:
 
         self._reactions_set = set()
 
-        self.empty_set_node = '__phi'
+        empty_set_label = '__phi'
 
-        self.add_state(self.empty_set_node, category='None')
+        self.empty_set_node = self.add_state(empty_set_label,
+                                             category='None')
 
         self.strict = True
 
         self.parameter_sub_dict = {}
 
+        arf_variable_labels = [f"ARF_{i + 1}" for i in range(self.nARFs)]
+        iaa_variable_labels = [f"iaa_{i + 1}" for i in range(self.nARFs)]
+
         #  Initialise parameter symbols
-        arf_symbols = [f"ARF_{i + 1}" for i in range(nARFs)]
+        self.arf_variables = [self.add_state(a, category="ARF")
+                              for a in arf_variable_labels]
 
-        for arf in arf_symbols:
-            self.add_state(arf, category='ARF')
+        self.iaa_variables = [self.add_state(i, category="IAA") for i in iaa_variable_labels]
 
-        iaa_symbols = [f"iaa_{i + 1}" for i in range(nIAAs)]
-        for iaa in iaa_symbols:
-            self.add_state(iaa, category='IAA')
+        promoter_labels = ["G"] + [f"G__{arf1}__{arf2}"
+                                   for arf1 in arf_variable_labels
+                                         for arf2 in arf_variable_labels
+                                   if arf2 >= arf1]\
+                                      + [f"G__{arf}" for arf in arf_variable_labels]\
+                         + [f"G__{arf}__{iaa}" for arf in arf_variable_labels
+                            for iaa in iaa_variable_labels]
 
-        self.promoter_symbols = ["G"] + [f"G__{arf1}__{arf2}"
-                                         for arf1 in arf_symbols
-                                         for arf2 in arf_symbols if arf2 >= arf1]\
-            + [f"G__{arf}" for arf in arf_symbols]\
-            + [f"G__{arf}__{iaa}" for arf in arf_symbols
-               for iaa in iaa_symbols]
-        self.promoter_symbols = list(set(self.promoter_symbols))
+        unbound_promoter = self.add_state("G", description="Unbound promoter state")
+        promoter_variables = []
+        for promoter in [p for p in promoter_labels if p != "G"]:
+            components = promoter.split("__")[1:]
 
-        for promoter in self.promoter_symbols:
-            self.add_state(promoter, category='promoter')
+            if len(components) == 2:
+                components = [f"D__{'__'.join(components)}"]
 
-        dimer_symbols = [f"D__{s1}__{s2}"
-                         for s1 in arf_symbols + iaa_symbols
-                         for s2 in arf_symbols + iaa_symbols if s2 >= s1]
-        self.dimer_symbols = dimer_symbols
+            _promoter_var = self.add_state(promoter, category='promoter',
+                                           components=components)
+            promoter_variables.append(_promoter_var)
 
-        for dimer in dimer_symbols:
-            self.add_state(dimer, category='dimer')
+        self.promoter_variables = promoter_variables
 
-        rna_symbols = [f"R__{iaa}" for iaa in iaa_symbols]
+        dimer_variable_labels = [f"D__{s1}__{s2}"
+                         for s1 in arf_variable_labels + iaa_variable_labels
+                         for s2 in arf_variable_labels + iaa_variable_labels if s2 >= s1]
+        self.dimer_variable_labels = dimer_variable_labels
+
+        dimer_variables = []
+        for dimer in dimer_variable_labels:
+            components = dimer.split("__")[1:]
+            _dimer_var = self.add_state(dimer, category='dimer',
+                                        components=components,
+                                        description=f"Dimer of {components[0]} protein "
+                                        f"and {components[1]} protein")
+            dimer_variables.append(_dimer_var)
+
+        self.dimer_variables = dimer_variables
+
+        rna_var_labels = [f"R__{iaa}" for iaa in iaa_variable_labels]
 
         if include_arf_transcription:
-            rna_symbols += [f"R__{arf}" for arf in arf_symbols]
+            rna_var_labels += [f"R__{arf}" for arf in arf_variable_labels]
 
-        self.rna_symbols = rna_symbols
+        rna_variables = []
 
-        for rna in rna_symbols:
-            self.add_state(rna, category='rna')
+        for r in rna_var_labels:
+            _rna_var = self.add_state(r, category="rna",
+                                      description=f"RNA for protein {r.split('__')[1]}")
+            rna_variables.append(_rna_var)
 
-        self.aux_symbol = 'x'
-        self.add_state(self.aux_symbol, category='None')
+        self.rna_variables = rna_variables
 
-        self.all_state_vars = sorted(arf_symbols + iaa_symbols
-                                     + self.promoter_symbols + dimer_symbols
-                                     + rna_symbols)
+        self.auxin_variable_label = 'x'
+        self.auxin_variable = self.add_state(self.auxin_variable_label, category='None')
 
-        state_var_eqns = [sp.sympify('0') for _ in self.all_state_vars]
+        self.all_state_variables = self.arf_variables + self.iaa_variables \
+            + self.promoter_variables + dimer_variables \
+            + rna_variables
 
         arf_decay = sp.sympify('d__arf__all')
         self.add_model_parameter(arf_decay, 1.0,
-                                 "decay rate of ARFs")
+                                 "decay rate of ARF proteins")
 
-        for _, arf in enumerate(arf_symbols):
-            self.add_reaction([], [arf], fwd_rates=[],
+        for _, arf in enumerate(self.arf_variables):
+            self.add_reaction([], [arf.name], fwd_rates=[],
                               bwd_rates=[arf_decay])
 
         if not include_arf_transcription:
             arf_production = sp.sympify('k__arf__all')
             self.add_model_parameter(arf_production, 1.0,
-                                     "production rate of ARFs")
+                                     "production rate of ARF proteins")
 
-            for _, arf in enumerate(arf_symbols):
-                self.add_reaction([], [arf], fwd_rates=[
-                    arf_production], bwd_rates=[])
+            for _, arf in enumerate(self.arf_variables):
+                self.add_reaction([], [arf.name], fwd_rates=[arf_production],
+                                  bwd_rates=[])
 
         # iaa_production = sp.sympify('k__iaa__all')
         iaa_decay = sp.sympify('d__iaa__all')
@@ -127,99 +154,107 @@ class auxin_signalling_pathway:
         self.add_model_parameter(iaa_decay, 1.0,
                                  "decay rate of Aux/IAAs")
 
-        for _, iaa in enumerate(iaa_symbols):
-            self.add_reaction([], [iaa], bwd_rates=[iaa_decay])
+        for _, iaa in enumerate(self.iaa_variables):
+            self.add_reaction([], [iaa.name], bwd_rates=[iaa_decay])
 
-        for d in dimer_symbols:
-            association_rate = sp.sympify(f"k__{d}")
-            dissociation_rate = sp.sympify(f"d__{d}")
+        for d in dimer_variables:
+            association_rate = sp.sympify(f"k__{d.name}")
+            dissociation_rate = sp.sympify(f"d__{d.name}")
 
             self.add_model_parameter(association_rate,
                                      0.001,
-                                     f"Association rate of dimer {d}")
+                                     f"Association rate of dimer {d.name}")
             self.add_model_parameter(dissociation_rate,
                                      0.1,
-                                     f"Dissociation rate of dimer {d}")
+                                     f"Dissociation rate of dimer {d.name}")
 
-            reactants = str(d).split('__')[1:]
-            self.add_reaction(reactants, [d], [association_rate],
+            reactants = d.components
+            self.add_reaction([str(r) for r in reactants], [d.name], [association_rate],
                               [dissociation_rate])
 
-        for iaa in iaa_symbols:
-            iaa_decay_rate = f"d__{iaa}__{self.aux_symbol}"
+        for iaa in self.iaa_variables:
+            iaa_decay_rate = f"d__{iaa.name}__{self.auxin_variable_label}"
             self.add_model_parameter(iaa_decay_rate, 0.1,
                                      "rate of auxin-mediated decay of Aux/IAA")
-            self.add_reaction([iaa], [self.empty_set_node],
+            self.add_reaction([iaa.name], [self.empty_set_node.name],
                               [iaa_decay_rate],
-                              enzymes=[self.aux_symbol])
+                              enzymes=[self.auxin_variable_label])
 
-        for promoter in self.promoter_symbols:
-            if promoter == 'G':
+        for promoter in self.promoter_variables:
+            if promoter.name == 'G':
+                assert len(promoter.components) == 0
                 continue
 
-            # TODO clean up this code
-            reactant = promoter[3:]
-            if '__' in reactant:
-                reactant = f"D__{reactant}"
+            assert len(promoter.components) == 1, f"Components are {promoter.components}"
+            reactant = list(promoter.components)[0]
 
-            promoter_binding_rate = f"k__{promoter}"
-            promoter_unbinding_rate = f"d__{promoter}"
+            promoter_binding_rate = f"k__{promoter.name}"
+            promoter_unbinding_rate = f"d__{promoter.name}"
 
             self.add_model_parameter(promoter_binding_rate,
                                      1.0,
-                                     f"binding rate for promoter {promoter}")
+                                     f"binding rate for promoter {promoter.name}")
             self.add_model_parameter(promoter_unbinding_rate,
                                      1.0,
                                      "dissociation rate for promoter"
                                      f"{promoter}")
 
             self.add_reaction(
-                [sp.sympify('G')], [promoter],
+                [unbound_promoter.name], [promoter.name],
                 [promoter_binding_rate], [],
                 enzymes=[reactant]
             )
 
             self.add_reaction(
-                [sp.sympify('G')], [promoter],
+                [unbound_promoter.name], [promoter.name],
                 [], [promoter_unbinding_rate],
                 enzymes=[]
             )
 
-        for promoter in self.promoter_symbols:
-            for rna_symbol in rna_symbols:
-                rate = f"k__{promoter}__{rna_symbol}"
+        for promoter in self.promoter_variables:
+            for rna in rna_variables:
+                rate = f"k__{promoter.name}__{rna.name}"
 
                 self.add_model_parameter(rate,
                                          1.0,
                                          f"Rate of transcription "
-                                         f"for {rna_symbol} for promoter "
-                                         f"{promoter}"
+                                         f"for {rna.name} for promoter "
+                                         f"{promoter.name}"
                                          )
 
                 self.add_reaction(
-                    [], [rna_symbol], [rate],
-                    [], [promoter], reaction_type="linear"
+                    [], [rna.name], [rate],
+                    [], [promoter.name], reaction_type="linear"
                 )
 
-        for promoter in self.promoter_symbols:
-            if promoter == 'G':
+        for promoter in self.promoter_variables:
+            if promoter.name == 'G':
                 continue
 
-            reactants = sorted(promoter.split('__')[1:])
+            reactants = promoter.components
 
-            if len(reactants) == 2:
+            if len(promoter.components) > 1:
+                raise ValueError("Number of promoter-state components cannot exceed 2")
+
+            bound_complex = list(promoter.components)[0]
+
+            if bound_complex == "dimer":
+
+                reactants = reactants[0].components
+
                 # TODO use different transition rates
-                partially_bound_promoter = f"G__{reactants[0]}"
+                partially_bound_promoter = f"G__{reactants[0].name}"
 
-                if partially_bound_promoter in self.promoter_symbols:
+                if partially_bound_promoter in self.promoter_variables:
                     promoter_binding_rate = f"k__{partially_bound_promoter}__bind__{reactants[1]}"
-                    promoter_unbinding_rate = f"d__{promoter}__unbind__{reactants[1]}"
+                    promoter_unbinding_rate = f"d__{promoter}__unbind__{reactants[1].name}"
 
-                    if promoter_binding_rate not in self.parameters:
+                    parameter_names = [p.name for p in self._parameters]
+                    if promoter_binding_rate not in parameter_names:
                         self.add_model_parameter(promoter_binding_rate)
                         self.add_model_parameter(promoter_unbinding_rate)
                         self.add_reaction(
-                            [partially_bound_promoter], [promoter],
+                            [partially_bound_promoter.name], [promoter.name],
                             [promoter_binding_rate], [],
                             enzymes=[reactants[1]])
 
@@ -229,20 +264,21 @@ class auxin_signalling_pathway:
                         )
 
                 partially_bound_promoter = f"G__{reactants[1]}"
-                if partially_bound_promoter in self.promoter_symbols:
+                if partially_bound_promoter in [p.name for p in self.promoter_variables]:
                     promoter_binding_rate = f"k__{partially_bound_promoter}__bind__{reactants[0]}"
-                    promoter_unbinding_rate = f"d__{promoter}__unbind__{reactants[0]}"
+                    promoter_unbinding_rate = f"d__{promoter}__unbind__{reactants[0].name}"
 
-                    if promoter_binding_rate not in self.parameters:
+                    parameter_names = [p.name for p in self._parameters]
+                    if promoter_binding_rate not in parameter_names:
                         self.add_model_parameter(promoter_binding_rate)
                         self.add_model_parameter(promoter_unbinding_rate)
                         self.add_reaction(
-                            [partially_bound_promoter], [promoter],
+                            [partially_bound_promoter.name], [promoter.name],
                             [promoter_binding_rate], [],
                             enzymes=[reactants[0]])
 
                         self.add_reaction(
-                            [partially_bound_promoter], [promoter],
+                            [partially_bound_promoter.name], [promoter.name],
                             [promoter_unbinding_rate]
                         )
 
@@ -252,26 +288,21 @@ class auxin_signalling_pathway:
                                  0.01,
                                  "RNA decay rate")
 
-        for rna_symbol in rna_symbols:
-            self.add_reaction([self.empty_set_node], [
-                rna_symbol], [], [rna_decay_rate])
-            prot = rna_symbol.split('__')[1]
+        for rna in rna_variables:
+            self.add_reaction([self.empty_set_node.name], [
+                rna.name], [], [rna_decay_rate])
+            prot = rna.name.split('__')[1]
 
-            production_rate = f"k__{rna_symbol}__{prot}"
+            production_rate = f"k__{rna.name}__{prot}"
             rate_default_val = 0.0
 
             self.add_model_parameter(production_rate, rate_default_val,
                                      f"Rate of production of {prot} from"
-                                     f"RNA {rna_symbol}")
+                                     f"RNA {rna.name}")
 
             self.add_reaction([], [prot],
                               fwd_rates=[production_rate],
-                              enzymes=[rna_symbol])
-
-        self.iaa_symbols = iaa_symbols
-        self.arf_symbols = arf_symbols
-
-        self.state_var_eqns = state_var_eqns
+                              enzymes=[rna.name])
 
         self.rhs_func = None
         self.cfunc_rhs = None
@@ -279,7 +310,8 @@ class auxin_signalling_pathway:
         self.jac_func = None
 
     def add_model_parameter(self, label: str, default_value: float = 0.0,
-                            description: str = "", strict: bool = True):
+                            description: str = "", strict: bool = True,
+                            make_unique:bool = False):
         """Add a new parameter to the model.
 
         :param label: Label to use for the new parameter. Should be a
@@ -289,6 +321,9 @@ class auxin_signalling_pathway:
         :param description: Short description of the new model parameter
         :param strict: If False, overwrite an existing parameter of the
             same name
+
+        :returns: A copy of the created Variable object
+
         :raises ValueError: When strict is True and a parameter with the
             same label already exists
         :raises ValueError: When label isn't a valid Python variable
@@ -306,13 +341,22 @@ class auxin_signalling_pathway:
         if strict is None:
             strict = self.strict
 
-        if strict and label in self.parameters:
+        if strict and label in [p.name for p in self._parameters]:
             raise ValueError(f"label {label} already present "
-                             f"in model: {self.parameters}")
+                             f"in model: {self._parameters}")
 
-        self.parameters[label] = (default_value, description)
+        variable = Parameter(label, description=description, default_value=default_value,
+                             make_unique=make_unique)
 
-    def add_state(self, label, category=None, strict=True):
+        if variable in self.graph.nodes():
+            raise ValueError(f"Tried to add parameter {label} but already present in state variables")
+
+        self._parameters.add(variable)
+
+        return variable
+
+    def add_state(self, label, strict: bool = True,
+                  **kwargs):
         """Add a state variable to the model e.g. a monomer, dimer or other
         chemical species.
 
@@ -321,18 +365,29 @@ class auxin_signalling_pathway:
             variable e.g ARF, Aux/IAA, or promoter
         :param strict: If True an exception is thrown when a state
             variable of the same name already exists in the model
+
+        :return: Copy of the added Varaible object
+
         :raises ValueError: When strict is True and a duplicate state-
             variable is added
         """
-
-        label = str(label)
+        variable = StateVariable(label, **kwargs)
 
         if strict and label in self.graph.nodes():
             raise ValueError(
                 f"Tried to add state {label} to the model but it already exists (strict=True)"
             )
 
-        self.graph.add_node(label, category=category)
+        self.graph.add_node(variable)
+
+        return copy(variable)
+
+    def _get_state_variable_by_name(self, name):
+        for var in self.get_state_variables(exclude_auxin=False, exclude_empty=False):
+            if var.name == name:
+                return var
+
+        raise ValueError(f"State variable with name {name} not found in model")
 
     def add_reaction(self, reactants: List[str] = [], products: List[str] = [],
                      fwd_rates: List[str] = [],
@@ -358,11 +413,11 @@ class auxin_signalling_pathway:
             any of the state variables are missing from the model
         """
 
-        reactants = tuple([str(r) for r in reactants])
-        products = tuple([str(p) for p in products])
-        fwd_rates = tuple([str(r) for r in fwd_rates])
-        bwd_rates = tuple([str(p) for p in bwd_rates])
-        enzymes = tuple([str(e) for e in enzymes])
+        reactants = tuple(reactants)
+        products = tuple(products)
+        fwd_rates = tuple([str(x) for x in fwd_rates])
+        bwd_rates = tuple([str(x) for x in bwd_rates])
+        enzymes = tuple(enzymes)
 
         reaction = Reaction(reactants, products,
                             fwd_rates, bwd_rates, enzymes,
@@ -398,16 +453,18 @@ class auxin_signalling_pathway:
                     self.add_state(state)
         elif strict:
             for state in set(reactants + products + enzymes):
-                if state not in self.graph.nodes:
+                states = self.get_state_variable_names()\
+                    + [self.empty_set_node.name, self.auxin_variable_label]
+                if state not in states:
                     raise Exception(f"Tried to add reaction with state {state} "
-                                    f"but {state} does not exist in the model"
-                                    "(strict=True)")
+                                    f"but {state} does not exist in the model "
+                                    f"(strict=True). States are {states}")
 
         for rate in bwd_rates + fwd_rates:
-            if rate not in self.parameters:
+            if rate not in self.get_parameter_names():
                 if strict:
                     raise Exception(f"rate {rate} not found in model. "
-                                    f"model has:\n{self.parameters}")
+                                    f"model has:\n{self._parameters}")
                 else:
                     self.add_model_parameter(rate)
 
@@ -421,23 +478,29 @@ class auxin_signalling_pathway:
         fwd_rates = [str(sym) for sym in fwd_rates]
 
         if len(reactants) == 0:
-            reactants = (self.empty_set_node,)
+            reactants = (self.empty_set_node.name,)
 
         for fwd_rate, reactant in zip(fwd_rates, reactants):
+            reactant = self._get_state_variable_by_name(reactant)
             for product in products:
+                product = self._get_state_variable_by_name(product)
                 self.graph.add_edge(
                     reactant, product, weight=fwd_rate,
                     reaction=reaction.__dict__)
 
         for bwd_rate, reactant in zip(bwd_rates, reactants):
+            reactant = self._get_state_variable_by_name(reactant)
             for product in products:
+                product = self._get_state_variable_by_name(product)
                 self.graph.add_edge(
                     product, reactant, weight=bwd_rate,
                     reaction=reaction.__dict__)
 
         for enzyme in enzymes:
+            enzyme = self._get_state_variable_by_name(enzyme)
             if fwd_rates:
                 for product in products:
+                    product = self._get_state_variable_by_name(product)
                     self.graph.add_edge(
                         enzyme, product, weight=fwd_rates[0],
                         reaction=reaction.__dict__,
@@ -447,6 +510,7 @@ class auxin_signalling_pathway:
 
             if bwd_rates:
                 for reactant in reactants:
+                    reactant = self._get_state_variable_by_name(reactant)
                     self.graph.add_edge(
                         enzyme, reactant, weight=bwd_rates[0],
                         reaction=reaction.__dict__,
@@ -536,10 +600,10 @@ class auxin_signalling_pathway:
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict.copy()
 
-        free_variables = [self.aux_symbol]
+        free_variables = [self.auxin_variable_label]
 
         if state_variables is None:
-            state_variables = self.get_state_variables()
+            state_variables = self.get_state_variable_names()
 
         odes = [sp.sympify('0') for _ in state_variables]
 
@@ -553,7 +617,7 @@ class auxin_signalling_pathway:
 
                 odes[var_index] += sp.Add(*new_terms)
 
-        sub_dict = {sp.sympify(self.empty_set_node): 1.0}
+        sub_dict = {sp.sympify(self.empty_set_node.name): 1.0}
         odes = sp.Matrix([odes]).T.subs(sub_dict)
 
         # TODO include the fact that the promoter variables sum to 1
@@ -567,22 +631,27 @@ class auxin_signalling_pathway:
 
         return odes, free_variables, parameters, constraints
 
-    def get_state_variables(self, parameter_subs_dict: dict = None):
+    def get_state_variable_names(self, *args, **kwargs):
         """Construct a list of the model's state variables.
 
         :returns: a list of the model's state variables, sorted in
             alphabetical order, and excluding the empty-set node, and
             the auxin concentration
         """
-        state_vars = list([str(s) for s in self.graph.nodes()
-                           if s != self.empty_set_node
-                           and s != self.aux_symbol])
 
-        if parameter_subs_dict:
-            state_vars = [parameter_subs_dict[s] if s in parameter_subs_dict else s
-                          for s in state_vars]
+        state_vars = self.get_state_variables(*args, **kwargs)
+        state_var_labels = [s.name for s in state_vars]
 
-        return sorted(state_vars)
+        return sorted(state_var_labels)
+
+    def get_state_variables(self, exclude_auxin: bool = True,
+                            exclude_empty: bool = True):
+        return list([s for s in self.graph.nodes()
+                     if (s.name != self.empty_set_node.name or not exclude_empty)
+                     and (s.name != self.auxin_variable_label or not exclude_auxin)])
+
+    def get_all_variables(self):
+        return self.get_state_variable_names() + list(self._parameters)
 
     def make_forward_solver(self, parameter_subs_dict: dict = None):
         """Generate a function which simulates the model.
@@ -662,7 +731,7 @@ class auxin_signalling_pathway:
             our ODE system
         """
 
-        n_y = len(self.get_state_variables())
+        n_y = len(self.get_state_variable_names())
 
         # Number of params + 'free variables' i.e. auxin
         n_data = len(self.get_default_parameters(parameter_subs_dict=parameter_subs_dict))\
@@ -699,7 +768,7 @@ class auxin_signalling_pathway:
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
-        jacobian = odes.jacobian(self.get_state_variables())
+        jacobian = odes.jacobian(self.get_state_variable_names())
 
         ic_dict = self.get_default_initial_conditions()
 
@@ -754,32 +823,19 @@ class auxin_signalling_pathway:
 
         return rhs_func
 
-    def get_default_initial_conditions(self, parameter_subs_dict: dict = None):
+    def get_default_initial_conditions(self):
         """Create a dictionary of state variables and corresponding initial
         conditions.
 
-        :param parameter_subs_dict: Optinal dictionary of parameter
-            substitutions to perform
         :returns: a dictionary with a key for each state variable
             corresponding to various default initial conidtions
         """
 
-        state_vars = self.get_state_variables(
-            parameter_subs_dict=parameter_subs_dict)
-        ic_dict = {str(s): 0.1 for s in state_vars if s != self.empty_set_node
-                   and s != self.aux_symbol}
+        state_variables = self.get_state_variables()
 
-        promoter_vars = [s for s in ic_dict if s[0] == 'G']
-        for v in promoter_vars:
-            ic_dict[v] = 0.0
-        ic_dict['G'] = 1.0
+        ic_dict = {p.name: p.initial_condition for p in state_variables}
 
-        for arf in self.arf_symbols:
-            ic_dict[arf] = 1.0
-
-        ic_dict = _sorted_dict(ic_dict)
-
-        return ic_dict
+        return _sorted_dict(ic_dict)
 
     def get_default_parameters(self, parameter_subs_dict: dict = None):
         """Return a default parameter set.
@@ -790,11 +846,10 @@ class auxin_signalling_pathway:
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict.copy()
 
-        param_dict = {parameter_subs_dict[k] if k in parameter_subs_dict
-                      and len(sp.sympify(parameter_subs_dict[k]).free_symbols) == 1
-                      else k:
-                      v[0]
-                      for k, v in self.parameters.items()}
+        param_dict = {parameter_subs_dict[k.name] if k.name in parameter_subs_dict
+                      and len(sp.sympify(parameter_subs_dict[k.name]).free_symbols) == 1
+                      else k.name: k.default_value
+                      for k in self._parameters}
 
         # sort parameters
         param_dict = _sorted_dict(param_dict)
@@ -815,8 +870,9 @@ class auxin_signalling_pathway:
 
         graph = self.graph.copy()
 
-        categories = [None] + sorted([val for val in nx.get_node_attributes(
-            graph, 'category').values() if val is not None])
+        categories = sorted([str(val.category) for val in graph.nodes() if val.category != "None"])
+
+        categories = np.unique(categories)
 
         n_categories = len(categories)
         palette = sns.color_palette("husl", n_categories)
@@ -871,24 +927,26 @@ class auxin_signalling_pathway:
         subs_dict = {}
 
         letters = ['U', 'V', 'W', 'X', 'Y', 'Z',]
-        for arf, lab in zip(self.arf_symbols, letters):
-            subs_dict[arf] = lab
+        for arf, lab in zip(self.arf_variables, letters):
+            subs_dict[arf.name] = lab
 
         letters = ['u', 'v', 'w', 'x', 'y', 'z',]
-        for iaa, lab in zip(self.iaa_symbols, letters):
-            subs_dict[iaa] = lab
+        for iaa, lab in zip(self.iaa_variables, letters):
+            subs_dict[iaa.name] = lab
 
-        for d in self.dimer_symbols:
-            components = d.split('__')[1:]
+        for d in self.dimer_variables:
+            components = d.components
             letter1, letter2 = [subs_dict[c] for c in components]
-            subs_dict[d] = f'D_{letter1}_{letter2}'
+            subs_dict[d.name] = f'D_{letter1}_{letter2}'
 
-        for i, promoter in enumerate(sorted(self.promoter_symbols)[1:]):
-            subs_dict[promoter] = r"G_" + str(i + 1)
+        for i, promoter in enumerate(self.promoter_variables):
+            if promoter.components:
+                subs_dict[promoter.name] = r"G_" + str(i + 1)
 
-        for i, p in enumerate(parameters.keys()):
+        for i, p in enumerate(parameters):
             subs_dict[p] = f"p_{i}"
 
+        print(odes, subs_dict)
         odes = odes.subs(subs_dict)
         return sp.latex(odes)
 
@@ -910,7 +968,7 @@ class auxin_signalling_pathway:
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
 
-        state_vars = self.get_state_variables()
+        state_vars = self.get_state_variable_names()
         default_parameters = self.get_default_parameters(
             parameter_subs_dict=parameter_subs_dict)
 
@@ -920,12 +978,12 @@ class auxin_signalling_pathway:
 
         if not aux_func_name:
             code_str += "\t(" + ", ".join(list(default_parameters.keys()) + aux_func_params) + ", " +\
-                f"{self.aux_symbol}) = p\n\n"
+                f"{self.auxin_variable_label}) = p\n\n"
         else:
             code_str += "\t(" +\
                 ", ".join(sorted(list(default_parameters.keys())) + aux_func_params)\
                 + ") = p\n\n"
-            code_str += f"\t{self.aux_symbol} = {aux_func_name}(t, " + ", ".join(
+            code_str += f"\t{self.auxin_variable_label} = {aux_func_name}(t, " + ", ".join(
                 aux_func_params) + ")\n\n"
 
         code_str += "\treturn " + "[" + str(julia_code(odes))[1:-1] + "]\n\n"
@@ -948,7 +1006,7 @@ class auxin_signalling_pathway:
         """Remove a parameter from the model.
 
         This method removes the parameter from the dictionary,
-        self.parameters, and from the default parameter substitution
+        self._parameters, and from the default parameter substitution
         dictionary (if it's there). If strict is True, a RuntimeError is
         raised if there is an attempt to remove a non-existant
         parameter.
@@ -957,15 +1015,15 @@ class auxin_signalling_pathway:
             be removed
         """
 
-        if strict and rate not in self.parameters:
+        if strict and rate not in self._parameters:
             raise RuntimeError(
                 f"Tried to remove parameter {rate} but it doesn't exist in the model")
 
         if rate in self.parameter_subs_dict:
             self.parameter_subs_dict.pop(rate)
 
-        if rate in self.parameters:
-            self.parameters.pop(rate)
+        if rate in self._parameters:
+            self._parameters.pop(rate)
 
     def remove_state(self, state: str, strict: bool = True):
         """Remove a state from the model.
@@ -1026,7 +1084,7 @@ class auxin_signalling_pathway:
 
         odes, free_variables, _, _ = self.generate_ode_system()
 
-        state_variables = self.get_state_variables()
+        state_variables = self.get_state_variable_names()
         param_dict = self.get_default_parameters()
 
         model = myokit.Model(name)
@@ -1037,7 +1095,7 @@ class auxin_signalling_pathway:
         comp = model[comp_name]
 
         if eliminate_promoter_state == '':
-            eliminate_promoter_state = sorted(self.promoter_symbols)[0]
+            eliminate_promoter_state = sorted([p.name for p in self.promoter_variables])[0]
 
         # Set up time variable
         model.add_component('engine')
@@ -1046,9 +1104,9 @@ class auxin_signalling_pathway:
         model['engine']['time'].set_rhs(0.0)
 
         #  Setup auxin symbol
-        comp.add_variable(self.aux_symbol)
-        comp[self.aux_symbol].set_rhs(0.0)
-        comp[self.aux_symbol].set_binding('pace')
+        comp.add_variable(self.auxin_variable_label)
+        comp[self.auxin_variable_label].set_rhs(0.0)
+        comp[self.auxin_variable_label].set_binding('pace')
 
         for parameter, ic in param_dict.items():
             comp.add_variable(parameter)
@@ -1057,8 +1115,9 @@ class auxin_signalling_pathway:
         for state in state_variables:
             comp.add_variable(state)
 
+        promoter_symbols = [sp.sympify(p.name) for p in self.promoter_variables]
         if eliminate_promoter_state:
-            mk_expr = 1 - sum(sp.Matrix([s for s in self.promoter_symbols if s
+            mk_expr = 1 - sum(sp.Matrix([s for s in promoter_symbols if str(s)
                                          != eliminate_promoter_state]))
             mk_expr = str(mk_expr)
             comp[eliminate_promoter_state].set_rhs(mk_expr)
@@ -1073,6 +1132,26 @@ class auxin_signalling_pathway:
             comp[state].set_rhs(mk_expr)
 
         return model
+
+    def get_variable_info(self):
+        rows = []
+        for p in self._parameters:
+            row = {"name": p.name, "description": p.description,
+                   "default_value": p.default_value}
+            rows.append(row)
+
+        parameter_df = pd.DataFrame(rows)
+
+        rows = []
+        for state in self.get_state_variables():
+            row = {"name": state.name, "description": state.description,
+                   "initial_condition": state.initial_condition, "components": state.components,
+                   "category": state.category}
+            rows.append(row)
+
+        states_df = pd.DataFrame(rows)
+
+        return parameter_df, states_df
 
     def get_model_name(self):
         """Compute a name for the model which includes the parameters used to
@@ -1120,6 +1199,9 @@ class auxin_signalling_pathway:
 
         self.parameter_subs_dict = param_subs_dict
 
+    def get_parameters(self):
+        return self._parameters.copy()
+
     def get_promoter_parameters(self):
         """Construct a list of model parameters which relate to the protein-
         promoter dynamics in the model.
@@ -1128,7 +1210,7 @@ class auxin_signalling_pathway:
         """
 
         pp_reactions = []
-        promoter_symbols = [s for s in self.get_state_variables()
+        promoter_symbols = [s for s in self.get_state_variable_names()
                             if s[0] == 'G']
 
         for r in self._reactions_set:
@@ -1160,6 +1242,24 @@ class auxin_signalling_pathway:
                     for p in sorted(list(self.get_default_parameters().keys()))}
 
         return ret_dict
+
+    def get_parameter_names(self):
+        return [p.name for p in self._parameters]
+
+    def generate_state_var_graph(self):
+        state_variables = self.get_state_variables()
+
+        graph = nx.graph()
+
+        for s in state_variables:
+            graph.add_node(s.name)
+
+        for s in state_variables:
+            for c in s.components:
+                graph.add_edge(s, c)
+
+        return graph
+
 
     @classmethod
     def pretty_print_parameter(cls, par: str):

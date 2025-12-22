@@ -61,7 +61,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         self.add_model_parameter(
             "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
 
-        for key in list(self.parameters.keys()):
+        for key in list(self.get_parameter_names):
             if "bind" in key:
                 self.remove_parameter(key)
 
@@ -148,7 +148,11 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         return {k: ret_dict[k] for k in sorted(list(ret_dict.keys()))}
 
-    def get_state_variables(self, include_promoter_vars=False, parameter_subs_dict=None):
+    def get_all_state_variables(self, parameter_subs_dict:bool = None):
+        return self.get_state_variables(include_promoter_vars=True)
+
+    def get_state_variables(self, include_promoter_vars : bool = False,
+                            parameter_subs_dict : dict = None):
         """Construct a list of the model's state variables.
 
         :returns: a list of the model's state variables, sorted in
@@ -156,8 +160,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             the auxin concentration
         """
 
-        state_vars = super().get_state_variables(
-            parameter_subs_dict=parameter_subs_dict)
+        state_vars = super().get_state_variables()
         state_vars = [s for s in state_vars if s != "G"]
 
         if not include_promoter_vars:
@@ -181,7 +184,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict
 
-        promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
+        promoter_vars = [s for s in
+                         sorted(self.get_all_state_variables())
+                         if s[0] == 'G']
         n_promoter_vars = len(promoter_vars)
 
         # Number of params + 'free variables' i.e. auxin
@@ -263,7 +268,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
 
         #  Assume the promoter expression is the only constraint
 
-        promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
+        promoter_vars = [s for s in sorted(self.get_all_state_variables()) if s[0] == 'G']
 
         promoter_exprs = constraints[0]
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
@@ -412,7 +417,9 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
 
-        promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
+        promoter_vars = [s for s in sorted(self.get_all_state_variables())
+                         if s[0] == 'G']
+
         promoter_exprs = constraints[0]
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
@@ -455,7 +462,7 @@ class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
         odes, free_variables, parameters, \
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
-        promoter_vars = [s for s in sorted(self.graph.nodes()) if s[0] == 'G']
+        promoter_vars = [s for s in sorted(self.get_all_state_variables()) if s[0] == 'G']
         promoter_exprs = constraints[0]
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
