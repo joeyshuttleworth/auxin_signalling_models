@@ -34,3 +34,7 @@ class StateVariable(Variable):
                 "components": self.components}
         return str(dict)
 
+    def __lt__(self, other):
+        # Define the default sorting order based on price
+        return str(self) < str(other)
+
