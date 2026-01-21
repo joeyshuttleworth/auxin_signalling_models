@@ -11,8 +11,8 @@ import networkx as nx
 import tkinter as tk
 from unittest.mock import MagicMock
 
-from auxin_signalling_models.auxin_signalling_pathway import \
-    auxin_signalling_pathway as asp_class
+from auxin_signalling_models.AuxinSignallingPathway import \
+    AuxinSignallingPathway as asp_class
 
 
 def setup_output_directory(dir_name, subdir_name):

@@ -15,13 +15,13 @@ from numbalsoda import lsoda, lsoda_sig
 from pyvis.network import Network
 from sympy.printing.julia import julia_code
 
-from .reaction import Reaction
+from .Reaction import Reaction
 from .Variable import Variable
 from .StateVariable import StateVariable
 from .Parameter import Parameter
 
 
-class auxin_signalling_pathway:
+class AuxinSignallingPathway:
     def __init__(self, nARFs: int = 1, nIAAs: int = 1, include_arf_transcription: bool = False,
                  aux_func: Callable[[float], float] = None):
         """A graph-based representation of an auxin-signalling pathway in terms

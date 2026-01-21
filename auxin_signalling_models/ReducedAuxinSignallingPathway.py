@@ -7,10 +7,10 @@ from numba import cfunc, njit
 from numbalsoda import lsoda_sig
 from sympy.printing.julia import julia_code
 
-from auxin_signalling_models import auxin_signalling_pathway
+from .AuxinSignallingPathway import AuxinSignallingPathway
 
 
-class reduced_auxin_signalling_pathway(auxin_signalling_pathway):
+class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
     def __init__(self, nARFs: int = 1, nIAAs: int = 1, aux_func: Callable[[float], float] = None, simple_promoter_states: bool = False,
                  **kwargs):
         """A simplified version of a auxin_signalling_pathway model, with

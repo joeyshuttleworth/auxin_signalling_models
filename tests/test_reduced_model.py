@@ -5,9 +5,9 @@ import unittest
 import matplotlib.pyplot as plt
 import numpy as np
 
-from auxin_signalling_models import auxin_signalling_pathway as asp_class
-from auxin_signalling_models.reduced_auxin_signalling_pathway import \
-    reduced_auxin_signalling_pathway as reduced_asp_class
+from auxin_signalling_models import AuxinSignallingPathway as asp_class
+from auxin_signalling_models.ReducedAuxinSignallingPathway import \
+    ReducedAuxinSignallingPathway as reduced_asp_class
 
 
 def setup_output_directory(dir_name, subdir_name):
