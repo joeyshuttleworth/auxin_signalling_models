@@ -8,6 +8,9 @@ import numpy as np
 import sympy as sp
 import networkx as nx
 
+import tkinter as tk
+from unittest.mock import MagicMock
+
 from auxin_signalling_models.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
 
@@ -178,6 +181,12 @@ class TestGeneratePathway(unittest.TestCase):
     def generate_state_var_graph(self):
         asp_model = asp_class(**self.kwargs_list[0])
         # state_vars = asp_model.get_state_variables()
+
+        if not os.environ.get("DISPLAY"):
+            # Mock Tk so that no actual window is created
+            tk.Tk = MagicMock()
+            tk.Toplevel = MagicMock()
+            tk.messagebox = MagicMock()
 
         graph = asp_model.generate_state_variable_graph()
         nx.draw_graph(graph)
