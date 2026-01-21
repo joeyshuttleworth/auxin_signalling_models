@@ -80,7 +80,8 @@ class auxin_signalling_pathway:
                          + [f"G__{arf}__{iaa}" for arf in arf_variable_labels
                             for iaa in iaa_variable_labels]
 
-        unbound_promoter = self.add_state("G", description="Unbound promoter state")
+        unbound_promoter = self.add_state("G", description="Unbound promoter state",
+                                          category="promoter")
         promoter_variables = []
         for promoter in [p for p in promoter_labels if p != "G"]:
             components = promoter.split("__")[1:]
@@ -609,7 +610,7 @@ class auxin_signalling_pathway:
 
         for reaction in self._reactions_set:
             for variable in reaction.reactants + reaction.products:
-                if str(variable) not in state_variables:
+                if variable not in state_variables:
                     continue
 
                 var_index = state_variables.index(variable)
@@ -631,11 +632,17 @@ class auxin_signalling_pathway:
 
         return odes, free_variables, parameters, constraints
 
-    def get_state_variable_names(self, *args, **kwargs):
-        """Construct a list of the model's state variables.
+    def get_state_variable_names(self, *args, exclude_auxin: bool = True,
+                                 exclude_empty: bool = True, **kwargs):
 
-        :returns: a list of the model's state variables, sorted in
-            alphabetical order, and excluding the empty-set node, and
+        """Construct a list of the names of the model's state variables.
+
+        :param exclude_auxin: When True, omit the auxin state variable
+
+        :param exclude_empty: When True, omit the empty state
+
+        :returns: a list of the model's state variable names, sorted in
+            alphabetical order, optionally excluding the empty-set node, and
             the auxin concentration
         """
 
@@ -646,11 +653,24 @@ class auxin_signalling_pathway:
 
     def get_state_variables(self, exclude_auxin: bool = True,
                             exclude_empty: bool = True):
-        return list([s for s in self.graph.nodes()
-                     if (s.name != self.empty_set_node.name or not exclude_empty)
-                     and (s.name != self.auxin_variable_label or not exclude_auxin)])
+        """ Construct a List of StateVariable objects found in the model
+
+        :param exclude_auxin: When True, omit the auxin state variable
+        :param exclude_empty: When True, omit the empty state
+
+        :returns: The constructed list of (copied) StateVariable objects
+        """
+
+        return list(sorted([s for s in self.graph.nodes()
+                            if (s.name != self.empty_set_node.name or not exclude_empty)
+                            and (s.name != self.auxin_variable_label or not exclude_auxin)]))
 
     def get_all_variables(self):
+        """ Constrict a list of string labels for variables found in the model (parameters and state variables)
+
+        :returns: List of strings describing each variable in the model
+        """
+
         return self.get_state_variable_names() + list(self._parameters)
 
     def make_forward_solver(self, parameter_subs_dict: dict = None):
@@ -946,7 +966,6 @@ class auxin_signalling_pathway:
         for i, p in enumerate(parameters):
             subs_dict[p] = f"p_{i}"
 
-        print(odes, subs_dict)
         odes = odes.subs(subs_dict)
         return sp.latex(odes)
 
@@ -1024,8 +1043,7 @@ class auxin_signalling_pathway:
 
         if rate in self._parameters:
             self._parameters.pop(rate)
-
-    def remove_state(self, state: str, strict: bool = True):
+    def remove_state(self, state: StateVariable, strict: bool = True):
         """Remove a state from the model.
 
         Removes some chemical species (i.e. a protein, dimer, or
@@ -1045,17 +1063,17 @@ class auxin_signalling_pathway:
         if state in node_list:
             self.graph.remove_node(state)
 
-        if state in self.promoter_symbols:
-            self.promoter_symbols.remove(state)
+        if state in self.promoter_variables:
+            self.promoter_variables.remove(state)
 
-        if state in self.arf_symbols:
-            self.arf_symbols.remove(state)
+        if state in self.arf_variables:
+            self.arf_variables.remove(state)
 
-        if state in self.iaa_symbols:
-            self.iaa_symbols.remove(state)
+        if state in self.iaa_variables:
+            self.iaa_variables.remove(state)
 
-        if state in self.rna_symbols:
-            self.rna_symbols.remove(state)
+        if state in self.rna_variables:
+            self.rna_variables.remove(state)
 
         reaction_set_list = []
 
@@ -1066,6 +1084,17 @@ class auxin_signalling_pathway:
                 reaction_set_list.append(reaction)
 
         self._reactions_set = set(reaction_set_list)
+
+    def remove_state_variable_by_name(self, name, *args, strict=True, **kwargs):
+
+        matching_states = [s for s in self.get_state_variables() if s.name == name]
+
+        if strict and len(matching_states) != 1:
+            raise RuntimeError(f"Tried removing state {name} for found {len(matching_states)} with this name: {matching_states}")
+
+        state = matching_states[0]
+
+        self.remove_state(state, *args, strict=strict, **kwargs)
 
     def generate_myokit_model(self, name: str = "",
                               eliminate_promoter_state: str = ""):
@@ -1115,9 +1144,9 @@ class auxin_signalling_pathway:
         for state in state_variables:
             comp.add_variable(state)
 
-        promoter_symbols = [sp.sympify(p.name) for p in self.promoter_variables]
+        promoter_variables = [sp.sympify(p.name) for p in self.promoter_variables]
         if eliminate_promoter_state:
-            mk_expr = 1 - sum(sp.Matrix([s for s in promoter_symbols if str(s)
+            mk_expr = 1 - sum(sp.Matrix([s for s in promoter_variables if str(s)
                                          != eliminate_promoter_state]))
             mk_expr = str(mk_expr)
             comp[eliminate_promoter_state].set_rhs(mk_expr)
@@ -1210,11 +1239,11 @@ class auxin_signalling_pathway:
         """
 
         pp_reactions = []
-        promoter_symbols = [s for s in self.get_state_variable_names()
+        promoter_variables = [s for s in self.get_state_variable_names()
                             if s[0] == 'G']
 
         for r in self._reactions_set:
-            if np.all(np.isin(r.reactants + r.products, promoter_symbols)):
+            if np.all(np.isin(r.reactants + r.products, promoter_variables)):
                 pp_reactions.append(r)
 
         pp_params = []
