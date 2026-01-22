@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from .Variable import Variable
 
 

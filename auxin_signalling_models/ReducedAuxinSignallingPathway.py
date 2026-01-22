@@ -22,7 +22,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         :param nARFs: The number of distinct categories of ARF genes to include in the model
         :param nIAAs: The number of distinct categories of Aux/IAA genes to include in the model
         :param aux_func: Optional time-dependent auxin-signal input function of the form f(t)
-        :simple_promoter_states: If true, remove states where the promoter is bound to a monoer - only allow dimer bounding
+        :simple_promoter_states: If true, remove states where the promoter is bound to monoer a - only allow dimer bounding
         """
 
         super().__init__(nARFs=nARFs, nIAAs=nIAAs, aux_func=aux_func, **kwargs)
@@ -78,7 +78,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         self.parameter_subs_dict = subs_dict
 
-    def generate_ode_system(self, reduced: bool = True, do_QSS_sub: bool = True,
+    def generate_ode_system(self, reduced: bool = True,
                             parameter_subs_dict: List = None, **kwargs):
         """Generate a list of sympy expressions comprising an ODE system.
 
@@ -103,30 +103,11 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         if reduced:
             state_vars = super().get_state_variable_names(include_promoter_vars=True)
-            promoter_vars = [s.name for s in self.get_state_variables() if s.category == 'promoter']
+            promoter_vars = [
+                s.name for s in self.get_state_variables() if s.category == 'promoter']
             promoter_odes = sp.Matrix([[ode for state_var, ode in zip(state_vars, odes)
                                         if state_var in promoter_vars]]).T
 
-            new_odes = []
-
-            # Apply QSS assumptions for other variables (untested)
-            for state_var, ode in zip(state_vars, odes):
-                if state_var in promoter_vars:
-                    new_odes.append(ode)
-                    continue
-                free_symbols = set([str(s) for s in ode.free_symbols])
-                for s in [s for s in free_symbols if s
-                          in self.QSS_bound_species]:
-                    v = self.QSS_bound_species[s]
-                    if state_var not in v:
-                        ode = ode.subs({
-                            s: sp.sympify(s)**2 / sum([sp.sympify(x)
-                                                       for x in [s] + list(v)])
-                        })
-                        ode = ode.subs({s: 0.0 for s in v})
-                new_odes.append(ode)
-
-            odes = sp.Matrix([new_odes]).T
             odes = odes.subs(parameter_subs_dict)
 
             promoter_odes = sp.Matrix([[promoter_odes]]).T
@@ -151,7 +132,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         """
 
         all_ic = super().get_default_initial_conditions()
-        state_vars = list(all_ic.keys())
         promoter_var_labels = [s.name for s in self.get_state_variables()
                                if s.category == "promoter"]
 
@@ -163,7 +143,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         return {k: ret_dict[k] for k in sorted(list(ret_dict.keys()))}
 
     def get_state_variables(self, include_promoter_vars: bool = True,
-                            parameter_subs_dict: dict = None, *args, **kwargs):
+                            *args, **kwargs):
         """Construct a list of the model's state variables.
 
         :returns: a list of the model's state variables
@@ -174,7 +154,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         if not include_promoter_vars:
             state_vars = [s for s in state_vars if s.category != "promoter"]
 
-        return state_vars
+        return sorted(state_vars)
 
     def make_cfunc_rhs(self, aux_func: Callable[[float], float] = None, parameter_subs_dict: dict = None):
         """Generate a c function which evaluates the RHS of the ODE system.
@@ -197,7 +177,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         n_promoter_vars = len(promoter_vars)
 
         # Number of params + 'free variables' i.e. auxin
-        n_data = len(self.get_default_parameters()) + 1
+        n_data = len(self.get_default_parameters(self.parameter_subs_dict)) + 1
         rhs_func = self.generate_rhs_func(parameter_subs_dict=parameter_subs_dict,
                                           njitted=True)
 
@@ -229,10 +209,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             # steady state doesn't depend on promoter states provided conservation
             promoter_expr_jac = promoter_expr_jac_func(
                 y, params, aux).astype(np.float64)
-
-            # if np.linalg.det(promoter_expr_jac @ promoter_expr_jac.T) > 1e-12\
-            #    and np.all(np.isfinite(promoter_expr_jac)):
-
             inhomog_val = inhomog_expr_func(y, params, aux).astype(np.float64)
             promoter_vals = np.linalg.solve(
                 promoter_expr_jac, -inhomog_val).flatten()
@@ -297,9 +273,11 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
 
         parameter_vars = sorted(list(self.get_default_parameters().keys()))
-        state_vars = sorted(self.get_state_variable_names())
+        state_vars = sorted(self.get_state_variable_names(
+            include_promoter_vars=False))
 
         promoter_inputs = (state_vars, parameter_vars, free_variables)
+
         promoter_expr_jac_func = sp.lambdify(promoter_inputs,
                                              promoter_expr_jac)
 
@@ -355,17 +333,13 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         promoter_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
 
-        replacements, expressions = sp.cse(promoter_expr)
-
         if use_cse:
+            replacements, expressions = sp.cse(promoter_expr)
             return replacements, expressions
-        else:
-            return promoter_expr
+
+        return promoter_expr
 
     def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
-        odes, free_variables, parameters, \
-            constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
-                                                   reduced=True)
         """Generate a derivative function for the model.
 
         Note that the returned function treats promoter variables as a
@@ -380,17 +354,24 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             and promoter states
         """
 
+        odes, free_variables, parameters, \
+            constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
+                                                   reduced=True)
+
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
         param_names = list(parameters.keys())
         state_vars = super().get_state_variables()
-        promoter_var_labels = [s.name for s in state_vars if s.category == "promoter"]
+        promoter_var_labels = [
+            s.name for s in state_vars if s.category == "promoter"]
 
-        state_var_labels = self.get_state_variable_names(include_promoter_vars=False)
+        state_var_labels = self.get_state_variable_names(
+            include_promoter_vars=False)
 
         for s in odes.free_symbols:
-            input_symbols = param_names + state_var_labels + promoter_var_labels + free_variables
+            input_symbols = param_names + state_var_labels + \
+                promoter_var_labels + free_variables
             if str(s) not in input_symbols:
                 raise ValueError(f"symbol {s} not found in {input_symbols}")
 
@@ -407,9 +388,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         :return: Sorted list of promoter state variables
         """
 
-        all_states = super().get_state_variables(*args, **kwargs)
-        state_vars = self.get_state_variables(*args, **kwargs)
-        return sorted([s for s in all_states if s not in state_vars])
+        all_states = self.get_state_variables(*args, **kwargs)
+        return [s for s in all_states if s.catgory == "promoter"]
 
     def get_promoter_steady_state_expr(self, parameter_subs_dict=None):
         """Make a sympy expression giving quasi steady state promoter variables
@@ -460,7 +440,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
         promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
                                                           for s in promoter_vars[1:]])})
-        state_vars = sorted(self.get_state_variable_names(include_promoter_vars=False))
+        state_vars = sorted(self.get_state_variable_names(
+            include_promoter_vars=False))
 
         promoter_ss_expr = self.get_promoter_steady_state_expr(
             parameter_subs_dict)
@@ -531,7 +512,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return code_str
 
-    def generate_jacobian_func(self, njitted: bool = False, parameter_subs_dict:dict = None):
+    def generate_jacobian_func(self, njitted: bool = False, parameter_subs_dict: dict = None):
         """ Define a function which computes the jacobian of the dynamical system defined by the model
 
         :param njitted: When True, return a JIT-compiled (numba.njit) version of the function

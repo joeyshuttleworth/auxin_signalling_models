@@ -1,8 +1,8 @@
-import sympy as sp
 import random
 import string
-
 from typing import Iterable
+
+import sympy as sp
 
 
 class Variable:
@@ -32,4 +32,3 @@ class Variable:
                 "description": self.description,
                 "components": self.components}
         return str(dict)
-

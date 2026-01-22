@@ -1,24 +1,22 @@
 import logging
-from typing import Callable, Iterable, List
-
 from copy import copy
+from typing import Callable, List
+
 import myokit
 import networkx as nx
 import numba as nb
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import sympy as sp
-import pandas as pd
-
 from numba import cfunc, njit
 from numbalsoda import lsoda, lsoda_sig
 from pyvis.network import Network
 from sympy.printing.julia import julia_code
 
-from .Reaction import Reaction
-from .Variable import Variable
-from .StateVariable import StateVariable
 from .Parameter import Parameter
+from .Reaction import Reaction
+from .StateVariable import StateVariable
 
 
 class AuxinSignallingPathway:
@@ -70,15 +68,16 @@ class AuxinSignallingPathway:
         self.arf_variables = [self.add_state(a, category="ARF")
                               for a in arf_variable_labels]
 
-        self.iaa_variables = [self.add_state(i, category="IAA") for i in iaa_variable_labels]
+        self.iaa_variables = [self.add_state(
+            i, category="IAA") for i in iaa_variable_labels]
 
         promoter_labels = ["G"] + [f"G__{arf1}__{arf2}"
                                    for arf1 in arf_variable_labels
-                                         for arf2 in arf_variable_labels
+                                   for arf2 in arf_variable_labels
                                    if arf2 >= arf1]\
-                                      + [f"G__{arf}" for arf in arf_variable_labels]\
-                         + [f"G__{arf}__{iaa}" for arf in arf_variable_labels
-                            for iaa in iaa_variable_labels]
+            + [f"G__{arf}" for arf in arf_variable_labels]\
+            + [f"G__{arf}__{iaa}" for arf in arf_variable_labels
+               for iaa in iaa_variable_labels]
 
         unbound_promoter = self.add_state("G", description="Unbound promoter state",
                                           category="promoter")
@@ -96,8 +95,8 @@ class AuxinSignallingPathway:
         self.promoter_variables = promoter_variables
 
         dimer_variable_labels = [f"D__{s1}__{s2}"
-                         for s1 in arf_variable_labels + iaa_variable_labels
-                         for s2 in arf_variable_labels + iaa_variable_labels if s2 >= s1]
+                                 for s1 in arf_variable_labels + iaa_variable_labels
+                                 for s2 in arf_variable_labels + iaa_variable_labels if s2 >= s1]
         self.dimer_variable_labels = dimer_variable_labels
 
         dimer_variables = []
@@ -126,7 +125,8 @@ class AuxinSignallingPathway:
         self.rna_variables = rna_variables
 
         self.auxin_variable_label = 'x'
-        self.auxin_variable = self.add_state(self.auxin_variable_label, category='None')
+        self.auxin_variable = self.add_state(
+            self.auxin_variable_label, category='None')
 
         self.all_state_variables = self.arf_variables + self.iaa_variables \
             + self.promoter_variables + dimer_variables \
@@ -186,7 +186,8 @@ class AuxinSignallingPathway:
                 assert len(promoter.components) == 0
                 continue
 
-            assert len(promoter.components) == 1, f"Components are {promoter.components}"
+            assert len(
+                promoter.components) == 1, f"Components are {promoter.components}"
             reactant = list(promoter.components)[0]
 
             promoter_binding_rate = f"k__{promoter.name}"
@@ -235,7 +236,8 @@ class AuxinSignallingPathway:
             reactants = promoter.components
 
             if len(promoter.components) > 1:
-                raise ValueError("Number of promoter-state components cannot exceed 2")
+                raise ValueError(
+                    "Number of promoter-state components cannot exceed 2")
 
             bound_complex = list(promoter.components)[0]
 
@@ -312,7 +314,7 @@ class AuxinSignallingPathway:
 
     def add_model_parameter(self, label: str, default_value: float = 0.0,
                             description: str = "", strict: bool = True,
-                            make_unique:bool = False):
+                            make_unique: bool = False):
         """Add a new parameter to the model.
 
         :param label: Label to use for the new parameter. Should be a
@@ -350,7 +352,8 @@ class AuxinSignallingPathway:
                              make_unique=make_unique)
 
         if variable in self.graph.nodes():
-            raise ValueError(f"Tried to add parameter {label} but already present in state variables")
+            raise ValueError(
+                f"Tried to add parameter {label} but already present in state variables")
 
         self._parameters.add(variable)
 
@@ -634,7 +637,6 @@ class AuxinSignallingPathway:
 
     def get_state_variable_names(self, *args, exclude_auxin: bool = True,
                                  exclude_empty: bool = True, **kwargs):
-
         """Construct a list of the names of the model's state variables.
 
         :param exclude_auxin: When True, omit the auxin state variable
@@ -675,6 +677,8 @@ class AuxinSignallingPathway:
 
     def make_forward_solver(self, parameter_subs_dict: dict = None):
         """Generate a function which simulates the model.
+
+        :param parameter_subs_dict: An optional dictionary of parameter substitutions
 
         :returns: a function returning model output under different
             times, parameter values, initial conditions and auxin
@@ -890,7 +894,8 @@ class AuxinSignallingPathway:
 
         graph = self.graph.copy()
 
-        categories = sorted([str(val.category) for val in graph.nodes() if val.category != "None"])
+        categories = sorted([str(val.category)
+                            for val in graph.nodes() if val.category != "None"])
 
         categories = np.unique(categories)
 
@@ -1043,6 +1048,7 @@ class AuxinSignallingPathway:
 
         if rate in self._parameters:
             self._parameters.pop(rate)
+
     def remove_state(self, state: StateVariable, strict: bool = True):
         """Remove a state from the model.
 
@@ -1087,10 +1093,12 @@ class AuxinSignallingPathway:
 
     def remove_state_variable_by_name(self, name, *args, strict=True, **kwargs):
 
-        matching_states = [s for s in self.get_state_variables() if s.name == name]
+        matching_states = [
+            s for s in self.get_state_variables() if s.name == name]
 
         if strict and len(matching_states) != 1:
-            raise RuntimeError(f"Tried removing state {name} for found {len(matching_states)} with this name: {matching_states}")
+            raise RuntimeError(
+                f"Tried removing state {name} for found {len(matching_states)} with this name: {matching_states}")
 
         state = matching_states[0]
 
@@ -1124,7 +1132,8 @@ class AuxinSignallingPathway:
         comp = model[comp_name]
 
         if eliminate_promoter_state == '':
-            eliminate_promoter_state = sorted([p.name for p in self.promoter_variables])[0]
+            eliminate_promoter_state = sorted(
+                [p.name for p in self.promoter_variables])[0]
 
         # Set up time variable
         model.add_component('engine')
@@ -1144,7 +1153,8 @@ class AuxinSignallingPathway:
         for state in state_variables:
             comp.add_variable(state)
 
-        promoter_variables = [sp.sympify(p.name) for p in self.promoter_variables]
+        promoter_variables = [sp.sympify(p.name)
+                              for p in self.promoter_variables]
         if eliminate_promoter_state:
             mk_expr = 1 - sum(sp.Matrix([s for s in promoter_variables if str(s)
                                          != eliminate_promoter_state]))
@@ -1240,7 +1250,7 @@ class AuxinSignallingPathway:
 
         pp_reactions = []
         promoter_variables = [s for s in self.get_state_variable_names()
-                            if s[0] == 'G']
+                              if s[0] == 'G']
 
         for r in self._reactions_set:
             if np.all(np.isin(r.reactants + r.products, promoter_variables)):
@@ -1288,7 +1298,6 @@ class AuxinSignallingPathway:
                 graph.add_edge(s, c)
 
         return graph
-
 
     @classmethod
     def pretty_print_parameter(cls, par: str):

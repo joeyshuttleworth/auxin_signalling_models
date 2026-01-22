@@ -1,15 +1,14 @@
 import logging
 import os
+import tkinter as tk
 import unittest
+from unittest.mock import MagicMock
 
 import matplotlib.pyplot as plt
 import myokit
+import networkx as nx
 import numpy as np
 import sympy as sp
-import networkx as nx
-
-import tkinter as tk
-from unittest.mock import MagicMock
 
 from auxin_signalling_models.AuxinSignallingPathway import \
     AuxinSignallingPathway as asp_class
@@ -172,11 +171,15 @@ class TestGeneratePathway(unittest.TestCase):
 
             param_info, state_info = asp_model.get_variable_info()
 
-            param_info.to_csv(os.path.join(self.output_dir, f"{asp_model.get_model_name()}_param_info.csv"))
-            state_info.to_csv(os.path.join(self.output_dir, f"{asp_model.get_model_name()}_state_info.csv"))
+            param_info.to_csv(os.path.join(
+                self.output_dir, f"{asp_model.get_model_name()}_param_info.csv"))
+            state_info.to_csv(os.path.join(
+                self.output_dir, f"{asp_model.get_model_name()}_state_info.csv"))
 
-            self.assertEqual(len(param_info.index), len(asp_model.get_parameter_names()))
-            self.assertEqual(len(state_info.index), len(asp_model.get_state_variable_names()))
+            self.assertEqual(len(param_info.index), len(
+                asp_model.get_parameter_names()))
+            self.assertEqual(len(state_info.index), len(
+                asp_model.get_state_variable_names()))
 
     def generate_state_var_graph(self):
         asp_model = asp_class(**self.kwargs_list[0])
@@ -190,7 +193,7 @@ class TestGeneratePathway(unittest.TestCase):
 
         graph = asp_model.generate_state_variable_graph()
         nx.draw_graph(graph)
-        plt.savefig(os.path.join(self.output_dir, f"state_var_graph"))
+        plt.savefig(os.path.join(self.output_dir, "state_var_graph"))
 
 
 if __name__ == "__main__":
