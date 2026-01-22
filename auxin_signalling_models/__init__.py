@@ -1,4 +1,4 @@
 from .AuxinSignallingPathway import AuxinSignallingPathway
 from .ReducedAuxinSignallingPathway import ReducedAuxinSignallingPathway
 
-__all__ = ['AuxinSignallingPathway', 'ReducedSignallingPathway']
+__all__ = ['AuxinSignallingPathway', 'ReducedAuxinSignallingPathway']
