@@ -1,6 +1,6 @@
 import logging
 import os
-import unittest
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,46 +9,42 @@ from auxin_signalling_models import auxin_signalling_pathway as asp_class
 from auxin_signalling_models.reduced_auxin_signalling_pathway import \
     reduced_auxin_signalling_pathway as reduced_asp_class
 
+this_dir = Path(__file__).parent
+golden_dir = os.path.join(this_dir.resolve(), "test_output_golden")
 
-def setup_output_directory(dir_name, subdir_name):
-    dirname = os.path.join(dir_name, subdir_name)
+test_output_dir = os.path.join(
+    "test_output", f"{Path(__file__).name.split('.')[0]}")
 
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
+os.makedirs(test_output_dir, exist_ok=True)
 
-    return dirname
+output_dir = test_output_dir
+
+model_names = [f"model{i}" for i in range(15)]
+logging.info("outputting to %s", test_output_dir)
+
+kwargs_list = [
+    {'nARFs': 1, 'nIAAs': 1},
+    {'nARFs': 2, 'nIAAs': 1},
+    {'nARFs': 2, 'nIAAs': 2},
+]
+
+# Add transcription flag to kwarg list
+arg_list_with_arf = [{**d, 'include_arf_transcription': True}
+                     for d in kwargs_list]
+kwargs_list = [item for pair in zip(kwargs_list, arg_list_with_arf)
+               for item in pair]
 
 
-class TestReducedModel(unittest.TestCase):
-
-    def setUp(self):
-        test_output_dir = setup_output_directory(
-            'test_output', f"{type(self).__name__}")
-        self.output_dir = test_output_dir
-
-        self.model_names = [f"model{i}" for i in range(15)]
-        logging.info("outputting to " + test_output_dir)
-
-        self.kwargs_list = [
-            {'nARFs': 1, 'nIAAs': 1},
-            {'nARFs': 2, 'nIAAs': 1},
-            {'nARFs': 2, 'nIAAs': 2},
-        ]
-
-        arg_list_with_arf = [{**d, 'include_arf_transcription': True}
-                             for d in self.kwargs_list]
-
-        self.kwargs_list = [item for pair in zip(self.kwargs_list, arg_list_with_arf)
-                            for item in pair]
+class TestReducedModel:
 
     def test_graph_generation(self):
-        for i, kwargs in enumerate(self.kwargs_list):
+        for i, kwargs in enumerate(kwargs_list):
             asp_model = reduced_asp_class(**kwargs)
             asp_model.draw_graph()
-            plt.savefig(os.path.join(self.output_dir, f"test_graph_{i}"))
+            plt.savefig(os.path.join(output_dir, f"test_graph_{i}"))
             plt.clf()
 
-            with open(os.path.join(self.output_dir,
+            with open(os.path.join(output_dir,
                                    f"test_graph_{i}.txt"), 'w') as fout:
                 fout.write(repr(asp_model.generate_ode_system()))
 
@@ -56,7 +52,7 @@ class TestReducedModel(unittest.TestCase):
         odes, free_variables, parameters, constraints = \
             asp_model.generate_ode_system()
 
-        with open(os.path.join(self.output_dir,
+        with open(os.path.join(output_dir,
                                f"test_graph_{i}.txt"), 'w') as fout:
             fout.write(f"ODEs: {odes}\n")
             fout.write(f"constraints: {constraints}\n")
@@ -72,11 +68,12 @@ class TestReducedModel(unittest.TestCase):
 
         return res, success
 
-    def test_generate_solve_ode(self):
+    def test_generate_solve_ode(self, request):
+        ignore_golden = request.config.getoption("ignore_golden")
 
         fig = plt.figure()
         ax = fig.subplots()
-        for i, kwargs in enumerate(self.kwargs_list):
+        for i, kwargs in enumerate(kwargs_list):
             asp_model = reduced_asp_class(**kwargs)
             res, success = self.generate_solve_ode(asp_model, i)
 
@@ -84,14 +81,30 @@ class TestReducedModel(unittest.TestCase):
             ts = np.linspace(0, 1, res.shape[0])
             ax.plot(ts, res, label=asp_model.get_state_variables())
             ax.legend()
-            fig.savefig(os.path.join(self.output_dir, f"solution_{i}"))
+            fig.savefig(os.path.join(output_dir, f"solution_{i}"))
             ax.cla()
 
-        self.assertTrue(success and np.all(np.isfinite(res)))
+            txt_savename = f"solution_{i}.txt"
+            np.savetxt(os.path.join(output_dir, txt_savename),
+                       res, fmt="%.18e")
+
+            if not ignore_golden:
+                # Compare against golden version
+                golden_file = os.path.join(golden_dir, Path(output_dir).name,
+                                           txt_savename)
+
+                assert os.path.exists(
+                    golden_file), f"Generated {txt_savename} but it doesn't exist in test_output_golden: {golden_file}"
+
+                golden_res = np.genfromtxt(golden_file, delimiter=' ')
+                assert np.mean(
+                    (golden_res.flatten() - res.flatten())**2) <= 1e-12
+
+        assert success and np.all(np.isfinite(res))
         plt.close(fig)
 
     def test_reduced_model_validation(self):
-        for kwargs in self.kwargs_list:
+        for kwargs in kwargs_list:
             asp_model_r = reduced_asp_class(**kwargs)
             asp_model_full = asp_class(**kwargs)
             asp_model_full.add_model_parameter(
@@ -111,7 +124,7 @@ class TestReducedModel(unittest.TestCase):
             ts = np.linspace(0, 100, 10)
             param_dict = asp_model_r.get_default_parameters()
             res, succ = solver_r(ts, param_dict, reduced_ic_dict, 1.0)
-            self.assertTrue(succ and np.all(np.isfinite(res)))
+            assert succ and np.all(np.isfinite(res))
 
             full_params = asp_model_full.get_default_parameters(
                 parameter_subs_dict=parameter_subs_dict)
@@ -119,8 +132,10 @@ class TestReducedModel(unittest.TestCase):
             res, succ = solver_full(
                 ts, full_params, full_ic_dict, 1.0, strict=False)
 
-    def test_model_with_arf_transcription(self):
-        for i, kwargs in enumerate(self.kwargs_list[:2]):
+    def test_model_with_arf_transcription(self, request):
+        ignore_golden = request.config.getoption("ignore_golden")
+
+        for i, kwargs in enumerate(kwargs_list[:2]):
             kwargs['include_arf_transcription'] = True
             asp_model_r = reduced_asp_class(**kwargs)
             solver_r = asp_model_r.make_forward_solver()
@@ -128,36 +143,66 @@ class TestReducedModel(unittest.TestCase):
             param_dict = asp_model_r.get_default_parameters()
             ic_dict = asp_model_r.get_default_initial_conditions()
             res, succ = solver_r(ts, param_dict, ic_dict, 1.0, strict=False)
-            self.assertTrue(succ and np.all(np.isfinite(res)))
+            assert succ and np.all(np.isfinite(res))
 
-    def test_output_latex(self):
-        for i, kwargs in enumerate(self.kwargs_list):
+            save_fname = f"test_model_with_arf_transcription_{i}.txt"
+            np.savetxt(os.path.join(output_dir, save_fname), res, fmt="%.18e")
+
+            if not ignore_golden:
+                # Compare against golden version
+                golden_file = os.path.join(golden_dir, Path(output_dir).name,
+                                           save_fname)
+
+                golden_res = np.genfromtxt(golden_file, delimiter=' ')
+                assert np.mean(
+                    (golden_res.flatten() - res.flatten())**2) < 1e-12
+
+    def test_output_latex(self, request):
+        ignore_golden = request.config.getoption("ignore_golden")
+
+        for i, kwargs in enumerate(kwargs_list):
             asp_model_r = reduced_asp_class(**kwargs)
 
             latex_out = asp_model_r.output_latex()
+            save_fname = f"reduced_model_{i}.tex"
 
-            with open(os.path.join(self.output_dir, f"reduced_model_{i}.tex"), 'w') as fout:
+            with open(os.path.join(output_dir, save_fname), 'w') as fout:
                 fout.write(latex_out)
 
-    def test_output_julia(self):
-        halfway = int(len(self.kwargs_list) / 2)
-        for i, kwargs in enumerate(self.kwargs_list[:halfway]):
+            if not ignore_golden:
+                # Compare against golden version
+                golden_file = os.path.join(golden_dir, Path(output_dir).name,
+                                           save_fname)
+
+                with open(golden_file, "r") as fin:
+                    latex_str = fin.read()
+
+                assert latex_str == latex_out
+
+    def test_output_julia(self, request):
+        ignore_golden = request.config.getoption("ignore_golden")
+        halfway = int(len(kwargs_list) / 2)
+        for i, kwargs in enumerate(kwargs_list[:halfway]):
             asp_model_r = reduced_asp_class(**kwargs)
 
             jl_out = asp_model_r.output_julia()
 
-            with open(os.path.join(self.output_dir, f"reduced_model_{i}.jl"), 'w') as fout:
+            save_fname = f"reduced_model_{i}.jl"
+            with open(os.path.join(output_dir, save_fname), 'w') as fout:
                 fout.write(jl_out)
+
+            if not ignore_golden:
+                # Compare against golden version
+                golden_file = os.path.join(golden_dir, Path(output_dir).name,
+                                           save_fname)
+
+                with open(golden_file, "r") as fin:
+                    jl_str = fin.read()
+
+                    assert jl_str == jl_out
 
     def test_get_jacobian(self):
         #  TODO Check answer against reference jacobian
-        for i, kwargs in enumerate(self.kwargs_list[:2]):
+        for i, kwargs in enumerate(kwargs_list[:2]):
             asp_model_r = reduced_asp_class(**kwargs)
             asp_model_r.get_jacobian_expr()
-
-        self.assertTrue(True)
-
-
-if __name__ == "__main__":
-    # logging.getLogger().setLevel(logging.INFO)
-    unittest.main()

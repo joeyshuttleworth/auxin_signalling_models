@@ -1,10 +1,11 @@
 import logging
 import os
-import unittest
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import myokit
 import numpy as np
+import pytest
 import sympy as sp
 
 from auxin_signalling_models.auxin_signalling_pathway import \
@@ -20,35 +21,36 @@ def setup_output_directory(dir_name, subdir_name):
     return dirname
 
 
-class TestGeneratePathway(unittest.TestCase):
-    def setUp(self):
-        test_output_dir = setup_output_directory(
-            'test_output', f"{type(self).__name__}")
-        self.output_dir = test_output_dir
+test_output_dir = setup_output_directory(
+    'test_output', f"{Path(__file__).name.split('.')[0]}")
 
-        self.model_names = [f"model{i}" for i in range(15)]
-        logging.info("outputting to " + test_output_dir)
+output_dir = test_output_dir
 
-        self.kwargs_list = [
-            {'nARFs': 1, 'nIAAs': 1},
-            {'nARFs': 2, 'nIAAs': 1},
-            {'nARFs': 1, 'nIAAs': 2},
-            {'nARFs': 2, 'nIAAs': 2},
-            {'nARFs': 3, 'nIAAs': 1},
-            {'nARFs': 4, 'nIAAs': 2},
-        ]
+model_names = [f"model{i}" for i in range(15)]
+logging.info("outputting to " + test_output_dir)
 
-        self.test_models = [asp_class(**kwargs) for
-                            kwargs in self.kwargs_list]
+kwargs_list = [
+    {'nARFs': 1, 'nIAAs': 1},
+    {'nARFs': 2, 'nIAAs': 1},
+    {'nARFs': 1, 'nIAAs': 2},
+    {'nARFs': 2, 'nIAAs': 2},
+    {'nARFs': 3, 'nIAAs': 1},
+    {'nARFs': 4, 'nIAAs': 2},
+]
 
+test_models = [asp_class(**kwargs) for
+               kwargs in kwargs_list]
+
+
+class TestGeneratePathway:
     def test_graph_generation(self):
-        for i, kwargs in enumerate(self.kwargs_list):
+        for i, kwargs in enumerate(kwargs_list):
             asp_model = asp_class(**kwargs)
             asp_model.draw_graph()
-            plt.savefig(os.path.join(self.output_dir, f"test_graph_{i}"))
+            plt.savefig(os.path.join(output_dir, f"test_graph_{i}"))
             plt.clf()
 
-            with open(os.path.join(self.output_dir,
+            with open(os.path.join(output_dir,
                                    f"test_graph_{i}.txt"), 'w') as fout:
                 fout.write(repr(asp_model.generate_ode_system()))
 
@@ -58,7 +60,7 @@ class TestGeneratePathway(unittest.TestCase):
     def generate_solve_ode(self, asp_model, i):
         odes, free_variables, parameters, constraints = \
             asp_model.generate_ode_system()
-        with open(os.path.join(self.output_dir,
+        with open(os.path.join(output_dir,
                                f"test_graph_{i}.txt"), 'w') as fout:
             fout.write(f"ODEs: {odes}\n")
             fout.write(f"constraints: {constraints}\n")
@@ -75,13 +77,13 @@ class TestGeneratePathway(unittest.TestCase):
         return res, success
 
     def test_generate_solve_ode(self):
-        for i, asp_model in enumerate(self.test_models):
+        for i, asp_model in enumerate(test_models):
             res, success = self.generate_solve_ode(asp_model, i)
 
-        self.assertTrue(success and np.all(np.isfinite(res)))
+        assert success and np.all(np.isfinite(res))
 
     def test_substitution(self):
-        for _, kwargs in enumerate(self.kwargs_list):
+        for _, kwargs in enumerate(kwargs_list):
             asp_model = asp_class(**kwargs)
             subs_dict = {}
 
@@ -106,63 +108,56 @@ class TestGeneratePathway(unittest.TestCase):
                 # If the value has been substituted with a constant (i.e. 0)
                 # skip this check
                 if sp.sympify(v).free_symbols:
-                    self.assertIn(v, list(parameters.keys()))
-                    self.assertIn(sp.sympify(v), odes.free_symbols)
+                    assert v in list(parameters.keys())
+                    assert sp.sympify(v) in odes.free_symbols
 
             logging.info(parameters)
 
     def test_output_latex(self):
-        for i, kwargs in enumerate(self.kwargs_list):
+        for i, kwargs in enumerate(kwargs_list):
             asp_model = asp_class(**kwargs)
 
             latex_out = asp_model.output_latex()
 
-            with open(os.path.join(self.output_dir, f"full_model_{i}.tex"), 'w') as fout:
+            with open(os.path.join(output_dir, f"full_model_{i}.tex"), 'w') as fout:
                 fout.write(latex_out)
 
     def test_myokit_output(self):
-        for i, kwargs in enumerate(self.kwargs_list):
+        for i, kwargs in enumerate(kwargs_list):
             asp_model = asp_class(**kwargs)
 
             myokit_model = asp_model.generate_myokit_model()
 
-            myokit.save(os.path.join(self.output_dir, f"full_model_{i}.mmt"),
+            myokit.save(os.path.join(output_dir, f"full_model_{i}.mmt"),
                         myokit_model)
 
     def test_output_julia(self):
-        for i, kwargs in enumerate(self.kwargs_list[:3]):
+        for i, kwargs in enumerate(kwargs_list[:3]):
             asp_model = asp_class(**kwargs)
             jl_out = asp_model.output_julia()
 
-            with open(os.path.join(self.output_dir,
+            with open(os.path.join(output_dir,
                                    f"model_{i}.jl"), 'w') as fout:
                 fout.write(jl_out)
 
     def test_get_model_name(self):
-        for kwargs in self.kwargs_list:
+        for kwargs in kwargs_list:
             asp_model = asp_class(**kwargs)
             name = asp_model.get_model_name()
-            self.assertTrue(isinstance(name, str))
+            assert isinstance(name, str)
 
     def test_print_parameters(self):
-        for i, kwargs in enumerate(self.kwargs_list):
+        for i, kwargs in enumerate(kwargs_list):
             asp_model = asp_class(**kwargs)
 
             pretty_str = asp_model.pretty_print_parameter_dict()
-            self.assertTrue(isinstance(pretty_str, dict))
+            assert isinstance(pretty_str, dict)
 
-            with open(os.path.join(self.output_dir, f"full_model_{i}_params.txt"), 'w') as fout:
+            with open(os.path.join(output_dir, f"full_model_{i}_params.txt"), 'w') as fout:
                 fout.write(str(pretty_str))
 
     def test_exception_bad_parameter_label(self):
-        asp_model = asp_class(**self.kwargs_list[0])
-        self.assertRaises(
-            ValueError,
-            lambda: asp_model.add_model_parameter(
+        asp_model = asp_class(**kwargs_list[0])
+        with pytest.raises(ValueError):
+            asp_model.add_model_parameter(
                 "1/////this is a bad parameter parameter")
-        )
-
-
-if __name__ == "__main__":
-    logging.getLogger().setLevel(logging.INFO)
-    unittest.main()
