@@ -6,7 +6,6 @@ import timeit
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from auxin_signalling_pathway.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
 

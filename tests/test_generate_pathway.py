@@ -1,13 +1,12 @@
 import logging
 import os
-import unittest
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import myokit
 import numpy as np
-import sympy as sp
 import pytest
+import sympy as sp
 
 from auxin_signalling_models.auxin_signalling_pathway import \
     auxin_signalling_pathway as asp_class
@@ -40,7 +39,8 @@ kwargs_list = [
 ]
 
 test_models = [asp_class(**kwargs) for
-                    kwargs in kwargs_list]
+               kwargs in kwargs_list]
+
 
 class TestGeneratePathway:
     def test_graph_generation(self):
@@ -161,8 +161,3 @@ class TestGeneratePathway:
         with pytest.raises(ValueError):
             asp_model.add_model_parameter(
                 "1/////this is a bad parameter parameter")
-
-
-if __name__ == "__main__":
-    logging.getLogger().setLevel(logging.INFO)
-    unittest.main()

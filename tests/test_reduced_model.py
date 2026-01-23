@@ -1,7 +1,5 @@
 import logging
 import os
-import unittest
-import pytest
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -14,7 +12,8 @@ from auxin_signalling_models.reduced_auxin_signalling_pathway import \
 this_dir = Path(__file__).parent
 golden_dir = os.path.join(this_dir.resolve(), "test_output_golden")
 
-test_output_dir = os.path.join("test_output", f"{Path(__file__).name.split('.')[0]}")
+test_output_dir = os.path.join(
+    "test_output", f"{Path(__file__).name.split('.')[0]}")
 
 os.makedirs(test_output_dir, exist_ok=True)
 
@@ -86,17 +85,20 @@ class TestReducedModel:
             ax.cla()
 
             txt_savename = f"solution_{i}.txt"
-            np.savetxt(os.path.join(output_dir, txt_savename), res, fmt="%.18e")
+            np.savetxt(os.path.join(output_dir, txt_savename),
+                       res, fmt="%.18e")
 
             if not ignore_golden:
                 # Compare against golden version
                 golden_file = os.path.join(golden_dir, Path(output_dir).name,
                                            txt_savename)
 
-                assert os.path.exists(golden_file), f"Generated {txt_savename} but it doesn't exist in test_output_golden: {golden_file}"
+                assert os.path.exists(
+                    golden_file), f"Generated {txt_savename} but it doesn't exist in test_output_golden: {golden_file}"
 
                 golden_res = np.genfromtxt(golden_file, delimiter=' ')
-                assert np.mean((golden_res.flatten() - res.flatten())**2) <= 1e-12
+                assert np.mean(
+                    (golden_res.flatten() - res.flatten())**2) <= 1e-12
 
         assert success and np.all(np.isfinite(res))
         plt.close(fig)
@@ -152,7 +154,8 @@ class TestReducedModel:
                                            save_fname)
 
                 golden_res = np.genfromtxt(golden_file, delimiter=' ')
-                assert np.mean((golden_res.flatten() - res.flatten())**2) < 1e-12
+                assert np.mean(
+                    (golden_res.flatten() - res.flatten())**2) < 1e-12
 
     def test_output_latex(self, request):
         ignore_golden = request.config.getoption("ignore_golden")
@@ -169,7 +172,7 @@ class TestReducedModel:
             if not ignore_golden:
                 # Compare against golden version
                 golden_file = os.path.join(golden_dir, Path(output_dir).name,
-                                        save_fname)
+                                           save_fname)
 
                 with open(golden_file, "r") as fin:
                     latex_str = fin.read()
@@ -203,4 +206,3 @@ class TestReducedModel:
         for i, kwargs in enumerate(kwargs_list[:2]):
             asp_model_r = reduced_asp_class(**kwargs)
             asp_model_r.get_jacobian_expr()
-

@@ -1,5 +1,3 @@
-import pytest
-
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -8,7 +6,3 @@ def pytest_addoption(parser):
         default=False,
         help="Skip golden snapshot tests"
     )
-
-# def pytest_configure(config):
-#     # optional: store globally
-#     config.ignore_golden = config.getoption("ignore_golden")
