@@ -60,7 +60,10 @@ class TestReducedModel:
             fout.write(f"transition rates: {parameters}\n")
 
         ic_dict = asp_model.get_default_initial_conditions()
+        ic_dict = {k: 1.0 for k in ic_dict}
+
         param_dict = asp_model.get_default_parameters()
+        param_dict = {k: 1.0 for k in param_dict}
 
         solver = asp_model.make_forward_solver()
         ts = np.linspace(0, 10, 10)
