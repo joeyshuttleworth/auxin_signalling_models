@@ -635,9 +635,6 @@ class AuxinSignallingPathway:
 
         constraints = [c.subs(parameter_subs_dict) for c in constraints]
 
-        parameters = {k: v for k, v in parameters.items()
-                      if sp.sympify(k) in all_symbols}
-
         return odes, free_variables, parameters, constraints
 
     def get_state_variable_names(self, *args, exclude_auxin: bool = True,
