@@ -1,0 +1,55 @@
+[[model]]
+name: auxin_signalling_pathway
+# Initial values
+NAP.ARF_1           = 1
+NAP.D__ARF_1__ARF_1 = 0.1
+NAP.D__ARF_1__iaa_1 = 0.1
+NAP.D__iaa_1__iaa_1 = 0.1
+NAP.G__ARF_1        = 0
+NAP.G__ARF_1__ARF_1 = 0
+NAP.G__ARF_1__iaa_1 = 0
+NAP.R__iaa_1        = 0.1
+NAP.iaa_1           = 0.1
+
+[NAP]
+dot(ARF_1) = -2 * ARF_1^2 * k__D__ARF_1__ARF_1 - ARF_1 * d__arf__all - ARF_1 * iaa_1 * k__D__ARF_1__iaa_1 + 2 * D__ARF_1__ARF_1 * d__D__ARF_1__ARF_1 + D__ARF_1__iaa_1 * d__D__ARF_1__iaa_1 + k__arf__all
+dot(D__ARF_1__ARF_1) = ARF_1^2 * k__D__ARF_1__ARF_1 - D__ARF_1__ARF_1 * d__D__ARF_1__ARF_1
+dot(D__ARF_1__iaa_1) = ARF_1 * iaa_1 * k__D__ARF_1__iaa_1 - D__ARF_1__iaa_1 * d__D__ARF_1__iaa_1
+dot(D__iaa_1__iaa_1) = -D__iaa_1__iaa_1 * d__D__iaa_1__iaa_1 + iaa_1^2 * k__D__iaa_1__iaa_1
+G = -G__ARF_1 - G__ARF_1__ARF_1 - G__ARF_1__iaa_1 + 1
+dot(G__ARF_1) = ARF_1 * G * k__G__ARF_1 - ARF_1 * G__ARF_1 * k__G__ARF_1__bind__ARF_1 - G__ARF_1 * d__G__ARF_1 - G__ARF_1 * iaa_1 * k__G__ARF_1__bind__iaa_1 + G__ARF_1__ARF_1 * d__G__ARF_1__ARF_1__unbind__ARF_1 + G__ARF_1__iaa_1 * d__G__ARF_1__iaa_1__unbind__iaa_1
+dot(G__ARF_1__ARF_1) = ARF_1 * G__ARF_1 * k__G__ARF_1__bind__ARF_1 + D__ARF_1__ARF_1 * G * k__G__ARF_1__ARF_1 - G__ARF_1__ARF_1 * d__G__ARF_1__ARF_1 - G__ARF_1__ARF_1 * d__G__ARF_1__ARF_1__unbind__ARF_1
+dot(G__ARF_1__iaa_1) = D__ARF_1__iaa_1 * G * k__G__ARF_1__iaa_1 + G__ARF_1 * iaa_1 * k__G__ARF_1__bind__iaa_1 - G__ARF_1__iaa_1 * d__G__ARF_1__iaa_1 - G__ARF_1__iaa_1 * d__G__ARF_1__iaa_1__unbind__iaa_1
+dot(R__iaa_1) = G * k__G__R__iaa_1 + G__ARF_1 * k__G__ARF_1__R__iaa_1 + G__ARF_1__ARF_1 * k__G__ARF_1__ARF_1__R__iaa_1 + G__ARF_1__iaa_1 * k__G__ARF_1__iaa_1__R__iaa_1 - R__iaa_1 * d__R
+d__D__ARF_1__ARF_1 = 0.1
+d__D__ARF_1__iaa_1 = 0.1
+d__D__iaa_1__iaa_1 = 0.1
+d__G__ARF_1 = 1
+d__G__ARF_1__ARF_1 = 1
+d__G__ARF_1__ARF_1__unbind__ARF_1 = 0
+d__G__ARF_1__iaa_1 = 1
+d__G__ARF_1__iaa_1__unbind__iaa_1 = 0
+d__R = 0.01
+d__arf__all = 1
+d__iaa_1__x = 0.1
+d__iaa__all = 1
+dot(iaa_1) = -ARF_1 * iaa_1 * k__D__ARF_1__iaa_1 + D__ARF_1__iaa_1 * d__D__ARF_1__iaa_1 + 2 * D__iaa_1__iaa_1 * d__D__iaa_1__iaa_1 + R__iaa_1 * k__R__iaa_1__iaa_1 - d__iaa_1__x * iaa_1 * x - d__iaa__all * iaa_1 - 2 * iaa_1^2 * k__D__iaa_1__iaa_1
+k__D__ARF_1__ARF_1 = 0.001
+k__D__ARF_1__iaa_1 = 0.001
+k__D__iaa_1__iaa_1 = 0.001
+k__G__ARF_1 = 1
+k__G__ARF_1__ARF_1 = 1
+k__G__ARF_1__ARF_1__R__iaa_1 = 1
+k__G__ARF_1__R__iaa_1 = 1
+k__G__ARF_1__bind__ARF_1 = 0
+k__G__ARF_1__bind__iaa_1 = 0
+k__G__ARF_1__iaa_1 = 1
+k__G__ARF_1__iaa_1__R__iaa_1 = 1
+k__G__R__iaa_1 = 1
+k__R__iaa_1__iaa_1 = 0
+k__arf__all = 1
+x = 0 bind pace
+
+[engine]
+time = 0 bind time
+
