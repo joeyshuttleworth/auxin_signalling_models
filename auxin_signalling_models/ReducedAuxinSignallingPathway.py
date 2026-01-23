@@ -469,7 +469,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         :returns: A string contianing a julia function definition
         """
 
-        print(self.parameter_subs_dict)
         odes, free_variables, parameters, \
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
