@@ -32,7 +32,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         for state in [s for s in self.get_state_variables()
                       if s.category == "promoter" and len(s.components) > 0]:
 
-            if state.components[0] in self.arf_variables:
+            if state.components[0] in [s.name for s in self.arf_variables]:
                 self.remove_state(state)
 
                 # Remove related parameters from model
@@ -43,7 +43,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                 self.remove_parameter(dissoc_rate)
 
         if simple_promoter_states:
-            for promoter in self.promoter_variables:
+            for promoter in self.promoter_variables[:]:
                 components = promoter.components
 
                 if components[0].category == "dimer":
@@ -53,16 +53,16 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                         raise RuntimeError(f"Invalid dimer variable: {dimer}")
 
                     if dimer.components[0] != dimer.components[1]:
-                        self.remove_state(dimer)
+                        self.remove_state_variable_by_name(promoter)
 
-                self.remove_state_by_name(promoter)
-
-        for iaa_symbol in self.iaa_variables:
+        for iaa_var in self.iaa_variables:
+            iaa_symbol = iaa_var.name
             rna_symbol = f"R__{iaa_symbol}"
             subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
 
         if self.include_arf_transcription:
-            for arf_symbol in self.arf_variables:
+            for arf_var in self.arf_variables:
+                arf_symbol = arf_var.name
                 rna_symbol = f"R__{arf_symbol}"
                 subs_dict[f"k__{rna_symbol}__{arf_symbol}"] = "k__RNA__ARF"
 
@@ -94,7 +94,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         """
 
         if parameter_subs_dict is None:
-            parameter_subs_dict = self.parameter_subs_dict
+            parameter_subs_dict = self.parameter_subs_dict.copy()
 
         odes, free_variables, parameters, constraints =\
             super().generate_ode_system(state_variables=super().get_state_variable_names(),
@@ -122,11 +122,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         return odes, free_variables, parameters, constraints
 
     def get_default_initial_conditions(self):
-        """Crete a dictionary of state variables and corresponding initial
+        """Create a dictionary of state variables and corresponding initial
         conditions.
 
-        :param parameter_subs_dict: Optinal dictionary of parameter
-            substitutions to perform
         :returns: a dictionary with a key for each state variable
             corresponding to various default initial conidtions
         """
@@ -471,6 +469,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         :returns: A string contianing a julia function definition
         """
 
+        print(self.parameter_subs_dict)
         odes, free_variables, parameters, \
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)

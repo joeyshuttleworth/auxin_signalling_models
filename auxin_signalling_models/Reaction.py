@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from .Variable import Variable
-
 
 @dataclass(eq=True, order=True, frozen=True)
 class Reaction:
@@ -19,11 +17,11 @@ class Reaction:
 
     """
 
-    reactants: tuple[Variable, ...]
-    products: tuple[Variable, ...]
-    fwd_rates: tuple[Variable, ...]
-    bwd_rates: tuple[Variable, ...]
-    enzymes: tuple[Variable, ...]
+    reactants: tuple[str, ...]
+    products: tuple[str, ...]
+    fwd_rates: tuple[str, ...]
+    bwd_rates: tuple[str, ...]
+    enzymes: tuple[str, ...]
     reaction_type: str = 'linear'
 
     def __str__(self):

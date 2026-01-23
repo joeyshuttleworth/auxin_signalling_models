@@ -88,7 +88,7 @@ class AuxinSignallingPathway:
             if len(components) == 2:
                 components = [f"D__{'__'.join(components)}"]
 
-            _promoter_var = self.add_state(promoter, category='promoter',
+            _promoter_var = self.add_state(promoter, category="promoter",
                                            components=components)
             promoter_variables.append(_promoter_var)
 
@@ -633,8 +633,7 @@ class AuxinSignallingPathway:
         parameters = self.get_default_parameters(
             parameter_subs_dict=parameter_subs_dict)
 
-        all_symbols = list(odes.free_symbols) + \
-            [list(c.free_symbols) for c in constraints]
+        constraints = [c.subs(parameter_subs_dict) for c in constraints]
 
         parameters = {k: v for k, v in parameters.items()
                       if sp.sympify(k) in all_symbols}
@@ -1032,7 +1031,7 @@ class AuxinSignallingPathway:
         """
         raise NotImplementedError()
 
-    def remove_parameter(self, rate: str, strict: bool = True):
+    def remove_parameter(self, rate_name: str, strict: bool = True):
         """Remove a parameter from the model.
 
         This method removes the parameter from the dictionary,
@@ -1041,19 +1040,28 @@ class AuxinSignallingPathway:
         raised if there is an attempt to remove a non-existant
         parameter.
 
+        :param rate_name: string identifying parameter to be removed
         :param strict: If True, do not allow non-existant parameters to
             be removed
         """
 
-        if strict and rate not in self._parameters:
-            raise RuntimeError(
-                f"Tried to remove parameter {rate} but it doesn't exist in the model")
+        matching_rates = [r for r in self._parameters if r.name == rate_name]
+
+        assert len(matching_rates) <= 1
+
+        if len(matching_rates) == 0:
+            if strict:
+                raise RuntimeError(
+                    f"Tried to remove parameter {rate} but it doesn't exist in the model")
+            return
+
+        rate = matching_rates[0]
 
         if rate in self.parameter_subs_dict:
-            self.parameter_subs_dict.pop(rate)
+            self.parameter_subs_dict.remove(rate)
 
         if rate in self._parameters:
-            self._parameters.pop(rate)
+            self._parameters.remove(rate)
 
     def remove_state(self, state: StateVariable, strict: bool = True):
         """Remove a state from the model.
@@ -1068,9 +1076,12 @@ class AuxinSignallingPathway:
 
         node_list = list(self.graph.nodes())
 
-        if strict and state not in node_list:
-            raise RuntimeError(
-                f"Tried to remove state {state} but it doesn't exist in the model")
+        if state not in node_list:
+            if strict:
+                raise RuntimeError(
+                    f"Tried to remove state {state} but it doesn't exist in the model")
+            else:
+                return
 
         if state in node_list:
             self.graph.remove_node(state)
@@ -1091,7 +1102,7 @@ class AuxinSignallingPathway:
 
         # Remove any reaction that includes this state, also
         for reaction in self._reactions_set:
-            if state not in list(reaction.products) + list(reaction.reactants)\
+            if state.name not in list(reaction.products) + list(reaction.reactants)\
                + list(reaction.enzymes):
                 reaction_set_list.append(reaction)
 
