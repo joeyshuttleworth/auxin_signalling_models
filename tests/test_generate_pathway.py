@@ -1,9 +1,8 @@
 import logging
 import os
 import tkinter as tk
-import unittest
-from unittest.mock import MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import matplotlib.pyplot as plt
 import myokit
@@ -178,8 +177,10 @@ class TestGeneratePathway:
             state_info.to_csv(os.path.join(
                 output_dir, f"{asp_model.get_model_name()}_state_info.csv"))
 
-            assert len(param_info.index) == len(asp_model.get_parameter_names())
-            assert len(state_info.index) == len(asp_model.get_state_variable_names())
+            assert len(param_info.index) == len(
+                asp_model.get_parameter_names())
+            assert len(state_info.index) == len(
+                asp_model.get_state_variable_names())
 
     def generate_state_var_graph(self):
         asp_model = asp_class(**kwargs_list[0])
