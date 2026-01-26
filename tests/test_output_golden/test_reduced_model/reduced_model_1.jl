@@ -1,4 +1,4 @@
-function reduced_auxin_signalling_pathway_f_deriv!(dz, z, p, t=0.0)
+function ReducedAuxinSignallingPathway_f_deriv!(dz, z, p, t=0.0)
 	(ARF_1, D__ARF_1__ARF_1, D__ARF_1__iaa_1, D__iaa_1__iaa_1, R__ARF_1, R__iaa_1, iaa_1) = z
 
 	(d__D__ARF_1__ARF_1, d__D__ARF_1__iaa_1, d__D__iaa_1__iaa_1, d__G__ARF_1__ARF_1, d__G__ARF_1__iaa_1, d__R, d__arf__all, d__iaa_1__x, d__iaa__all, k__D__ARF_1__ARF_1, k__D__ARF_1__iaa_1, k__D__iaa_1__iaa_1, k__G__ARF_1__ARF_1, k__G__ARF_1__ARF_1__R__ARF_1, k__G__ARF_1__ARF_1__R__iaa_1, k__G__ARF_1__R__ARF_1, k__G__ARF_1__R__iaa_1, k__G__ARF_1__iaa_1, k__G__ARF_1__iaa_1__R__ARF_1, k__G__ARF_1__iaa_1__R__iaa_1, k__G__R__ARF_1, k__G__R__iaa_1, k__RNA__ARF, k__RNA__IAA, x) = p
