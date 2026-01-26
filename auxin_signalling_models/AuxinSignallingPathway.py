@@ -1050,7 +1050,7 @@ class AuxinSignallingPathway:
         if len(matching_rates) == 0:
             if strict:
                 raise RuntimeError(
-                    f"Tried to remove parameter {rate} but it doesn't exist in the model")
+                    f"Tried to remove parameter {rate_name} but it doesn't exist in the model")
             return
 
         rate = matching_rates[0]
