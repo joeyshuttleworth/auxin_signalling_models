@@ -143,8 +143,13 @@ class TestReducedModel:
             asp_model_r = reduced_asp_class(**kwargs)
             solver_r = asp_model_r.make_forward_solver()
             ts = np.linspace(0, 100, 250)
-            param_dict = asp_model_r.get_default_parameters()
+
             ic_dict = asp_model_r.get_default_initial_conditions()
+            ic_dict = {k: 1.0 for k in ic_dict}
+
+            param_dict = asp_model_r.get_default_parameters()
+            param_dict = {k: 1.0 for k in param_dict}
+
             res, succ = solver_r(ts, param_dict, ic_dict, 1.0, strict=False)
             assert succ and np.all(np.isfinite(res))
 
