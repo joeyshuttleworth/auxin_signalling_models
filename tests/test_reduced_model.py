@@ -5,9 +5,9 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from auxin_signalling_models import auxin_signalling_pathway as asp_class
-from auxin_signalling_models.reduced_auxin_signalling_pathway import \
-    reduced_auxin_signalling_pathway as reduced_asp_class
+from auxin_signalling_models import AuxinSignallingPathway as asp_class
+from auxin_signalling_models.ReducedAuxinSignallingPathway import \
+    ReducedAuxinSignallingPathway as reduced_asp_class
 
 this_dir = Path(__file__).parent
 golden_dir = os.path.join(this_dir.resolve(), "test_output_golden")
@@ -60,7 +60,10 @@ class TestReducedModel:
             fout.write(f"transition rates: {parameters}\n")
 
         ic_dict = asp_model.get_default_initial_conditions()
+        ic_dict = {k: 1.0 for k in ic_dict}
+
         param_dict = asp_model.get_default_parameters()
+        param_dict = {k: 1.0 for k in param_dict}
 
         solver = asp_model.make_forward_solver()
         ts = np.linspace(0, 10, 10)
@@ -77,9 +80,9 @@ class TestReducedModel:
             asp_model = reduced_asp_class(**kwargs)
             res, success = self.generate_solve_ode(asp_model, i)
 
-            res = res / res.max(axis=1)[:, None]
             ts = np.linspace(0, 1, res.shape[0])
-            ax.plot(ts, res, label=asp_model.get_state_variables())
+            ax.plot(ts, res,
+                    label=asp_model.get_state_variable_names(include_promoter_vars=False))
             ax.legend()
             fig.savefig(os.path.join(output_dir, f"solution_{i}"))
             ax.cla()
@@ -140,8 +143,13 @@ class TestReducedModel:
             asp_model_r = reduced_asp_class(**kwargs)
             solver_r = asp_model_r.make_forward_solver()
             ts = np.linspace(0, 100, 250)
-            param_dict = asp_model_r.get_default_parameters()
+
             ic_dict = asp_model_r.get_default_initial_conditions()
+            ic_dict = {k: 1.0 for k in ic_dict}
+
+            param_dict = asp_model_r.get_default_parameters()
+            param_dict = {k: 1.0 for k in param_dict}
+
             res, succ = solver_r(ts, param_dict, ic_dict, 1.0, strict=False)
             assert succ and np.all(np.isfinite(res))
 

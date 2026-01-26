@@ -1,15 +1,18 @@
 import logging
 import os
+import tkinter as tk
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import matplotlib.pyplot as plt
 import myokit
+import networkx as nx
 import numpy as np
 import pytest
 import sympy as sp
 
-from auxin_signalling_models.auxin_signalling_pathway import \
-    auxin_signalling_pathway as asp_class
+from auxin_signalling_models.AuxinSignallingPathway import \
+    AuxinSignallingPathway as asp_class
 
 
 def setup_output_directory(dir_name, subdir_name):
@@ -87,18 +90,18 @@ class TestGeneratePathway:
             asp_model = asp_class(**kwargs)
             subs_dict = {}
 
-            for rna_symbol, iaa_symbol in zip(asp_model.rna_symbols,
-                                              asp_model.iaa_symbols):
-                subs_dict[f"k__{rna_symbol}__{iaa_symbol}"] = "k__RNA__IAA"
+            for rna_symbol, iaa_symbol in zip(asp_model.rna_variables,
+                                              asp_model.iaa_variables):
+                subs_dict[f"k__{rna_symbol.name}__{iaa_symbol.name}"] = "k__RNA__IAA"
 
-            for key, val in asp_model.parameters.items():
-                if "bind" in key:
-                    subs_dict[key] = 0.0
+            for par in asp_model.get_parameters():
+                if "bind" in par.name:
+                    subs_dict[par.name] = 0.0
 
-            for arf_symbol in asp_model.arf_symbols:
-                for iaa_symbol in asp_model.iaa_symbols:
-                    for rna_symbol in asp_model.rna_symbols:
-                        subs_dict[f"k__G__{arf_symbol}__{iaa_symbol}__{rna_symbol}"] = 0.0
+            for arf in asp_model.arf_variables:
+                for iaa in asp_model.iaa_variables:
+                    for rna in asp_model.rna_variables:
+                        subs_dict[f"k__G__{arf.name}__{iaa.name}__{rna.name}"] = 0.0
 
             odes, free_variables, parameters, constraints \
                 = asp_model.generate_ode_system(parameter_subs_dict=subs_dict)
@@ -161,3 +164,34 @@ class TestGeneratePathway:
         with pytest.raises(ValueError):
             asp_model.add_model_parameter(
                 "1/////this is a bad parameter parameter")
+        asp_model = asp_class(**kwargs_list[0])
+
+    def test_get_parameter_info(self):
+        for kwargs in kwargs_list:
+            asp_model = asp_class(**kwargs)
+
+            param_info, state_info = asp_model.get_variable_info()
+
+            param_info.to_csv(os.path.join(
+                output_dir, f"{asp_model.get_model_name()}_param_info.csv"))
+            state_info.to_csv(os.path.join(
+                output_dir, f"{asp_model.get_model_name()}_state_info.csv"))
+
+            assert len(param_info.index) == len(
+                asp_model.get_parameter_names())
+            assert len(state_info.index) == len(
+                asp_model.get_state_variable_names())
+
+    def generate_state_var_graph(self):
+        asp_model = asp_class(**kwargs_list[0])
+        # state_vars = asp_model.get_state_variables()
+
+        if not os.environ.get("DISPLAY"):
+            # Mock Tk so that no actual window is created
+            tk.Tk = MagicMock()
+            tk.Toplevel = MagicMock()
+            tk.messagebox = MagicMock()
+
+        graph = asp_model.generate_state_variable_graph()
+        nx.draw_graph(graph)
+        plt.savefig(os.path.join(output_dir, "state_var_graph"))
