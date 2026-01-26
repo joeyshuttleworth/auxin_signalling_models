@@ -1,0 +1,80 @@
+,name,description,initial_condition,components,category
+0,ARF_1,,1.0,(),ARF
+1,ARF_2,,1.0,(),ARF
+2,ARF_3,,1.0,(),ARF
+3,ARF_4,,1.0,(),ARF
+4,D__ARF_1__ARF_1,Dimer of ARF_1 protein and ARF_1 protein,1.0,"('ARF_1', 'ARF_1')",dimer
+5,D__ARF_1__ARF_2,Dimer of ARF_1 protein and ARF_2 protein,1.0,"('ARF_1', 'ARF_2')",dimer
+6,D__ARF_1__ARF_3,Dimer of ARF_1 protein and ARF_3 protein,1.0,"('ARF_1', 'ARF_3')",dimer
+7,D__ARF_1__ARF_4,Dimer of ARF_1 protein and ARF_4 protein,1.0,"('ARF_1', 'ARF_4')",dimer
+8,D__ARF_1__iaa_1,Dimer of ARF_1 protein and iaa_1 protein,1.0,"('ARF_1', 'iaa_1')",dimer
+9,D__ARF_1__iaa_2,Dimer of ARF_1 protein and iaa_2 protein,1.0,"('ARF_1', 'iaa_2')",dimer
+10,D__ARF_1__iaa_3,Dimer of ARF_1 protein and iaa_3 protein,1.0,"('ARF_1', 'iaa_3')",dimer
+11,D__ARF_1__iaa_4,Dimer of ARF_1 protein and iaa_4 protein,1.0,"('ARF_1', 'iaa_4')",dimer
+12,D__ARF_2__ARF_2,Dimer of ARF_2 protein and ARF_2 protein,1.0,"('ARF_2', 'ARF_2')",dimer
+13,D__ARF_2__ARF_3,Dimer of ARF_2 protein and ARF_3 protein,1.0,"('ARF_2', 'ARF_3')",dimer
+14,D__ARF_2__ARF_4,Dimer of ARF_2 protein and ARF_4 protein,1.0,"('ARF_2', 'ARF_4')",dimer
+15,D__ARF_2__iaa_1,Dimer of ARF_2 protein and iaa_1 protein,1.0,"('ARF_2', 'iaa_1')",dimer
+16,D__ARF_2__iaa_2,Dimer of ARF_2 protein and iaa_2 protein,1.0,"('ARF_2', 'iaa_2')",dimer
+17,D__ARF_2__iaa_3,Dimer of ARF_2 protein and iaa_3 protein,1.0,"('ARF_2', 'iaa_3')",dimer
+18,D__ARF_2__iaa_4,Dimer of ARF_2 protein and iaa_4 protein,1.0,"('ARF_2', 'iaa_4')",dimer
+19,D__ARF_3__ARF_3,Dimer of ARF_3 protein and ARF_3 protein,1.0,"('ARF_3', 'ARF_3')",dimer
+20,D__ARF_3__ARF_4,Dimer of ARF_3 protein and ARF_4 protein,1.0,"('ARF_3', 'ARF_4')",dimer
+21,D__ARF_3__iaa_1,Dimer of ARF_3 protein and iaa_1 protein,1.0,"('ARF_3', 'iaa_1')",dimer
+22,D__ARF_3__iaa_2,Dimer of ARF_3 protein and iaa_2 protein,1.0,"('ARF_3', 'iaa_2')",dimer
+23,D__ARF_3__iaa_3,Dimer of ARF_3 protein and iaa_3 protein,1.0,"('ARF_3', 'iaa_3')",dimer
+24,D__ARF_3__iaa_4,Dimer of ARF_3 protein and iaa_4 protein,1.0,"('ARF_3', 'iaa_4')",dimer
+25,D__ARF_4__ARF_4,Dimer of ARF_4 protein and ARF_4 protein,1.0,"('ARF_4', 'ARF_4')",dimer
+26,D__ARF_4__iaa_1,Dimer of ARF_4 protein and iaa_1 protein,1.0,"('ARF_4', 'iaa_1')",dimer
+27,D__ARF_4__iaa_2,Dimer of ARF_4 protein and iaa_2 protein,1.0,"('ARF_4', 'iaa_2')",dimer
+28,D__ARF_4__iaa_3,Dimer of ARF_4 protein and iaa_3 protein,1.0,"('ARF_4', 'iaa_3')",dimer
+29,D__ARF_4__iaa_4,Dimer of ARF_4 protein and iaa_4 protein,1.0,"('ARF_4', 'iaa_4')",dimer
+30,D__iaa_1__iaa_1,Dimer of iaa_1 protein and iaa_1 protein,1.0,"('iaa_1', 'iaa_1')",dimer
+31,D__iaa_1__iaa_2,Dimer of iaa_1 protein and iaa_2 protein,1.0,"('iaa_1', 'iaa_2')",dimer
+32,D__iaa_1__iaa_3,Dimer of iaa_1 protein and iaa_3 protein,1.0,"('iaa_1', 'iaa_3')",dimer
+33,D__iaa_1__iaa_4,Dimer of iaa_1 protein and iaa_4 protein,1.0,"('iaa_1', 'iaa_4')",dimer
+34,D__iaa_2__iaa_2,Dimer of iaa_2 protein and iaa_2 protein,1.0,"('iaa_2', 'iaa_2')",dimer
+35,D__iaa_2__iaa_3,Dimer of iaa_2 protein and iaa_3 protein,1.0,"('iaa_2', 'iaa_3')",dimer
+36,D__iaa_2__iaa_4,Dimer of iaa_2 protein and iaa_4 protein,1.0,"('iaa_2', 'iaa_4')",dimer
+37,D__iaa_3__iaa_3,Dimer of iaa_3 protein and iaa_3 protein,1.0,"('iaa_3', 'iaa_3')",dimer
+38,D__iaa_3__iaa_4,Dimer of iaa_3 protein and iaa_4 protein,1.0,"('iaa_3', 'iaa_4')",dimer
+39,D__iaa_4__iaa_4,Dimer of iaa_4 protein and iaa_4 protein,1.0,"('iaa_4', 'iaa_4')",dimer
+40,G,Unbound promoter state,1.0,(),promoter
+41,G__ARF_1,,1.0,"('ARF_1',)",promoter
+42,G__ARF_1__ARF_1,,1.0,"('D__ARF_1__ARF_1',)",promoter
+43,G__ARF_1__ARF_2,,1.0,"('D__ARF_1__ARF_2',)",promoter
+44,G__ARF_1__ARF_3,,1.0,"('D__ARF_1__ARF_3',)",promoter
+45,G__ARF_1__ARF_4,,1.0,"('D__ARF_1__ARF_4',)",promoter
+46,G__ARF_1__iaa_1,,1.0,"('D__ARF_1__iaa_1',)",promoter
+47,G__ARF_1__iaa_2,,1.0,"('D__ARF_1__iaa_2',)",promoter
+48,G__ARF_1__iaa_3,,1.0,"('D__ARF_1__iaa_3',)",promoter
+49,G__ARF_1__iaa_4,,1.0,"('D__ARF_1__iaa_4',)",promoter
+50,G__ARF_2,,1.0,"('ARF_2',)",promoter
+51,G__ARF_2__ARF_2,,1.0,"('D__ARF_2__ARF_2',)",promoter
+52,G__ARF_2__ARF_3,,1.0,"('D__ARF_2__ARF_3',)",promoter
+53,G__ARF_2__ARF_4,,1.0,"('D__ARF_2__ARF_4',)",promoter
+54,G__ARF_2__iaa_1,,1.0,"('D__ARF_2__iaa_1',)",promoter
+55,G__ARF_2__iaa_2,,1.0,"('D__ARF_2__iaa_2',)",promoter
+56,G__ARF_2__iaa_3,,1.0,"('D__ARF_2__iaa_3',)",promoter
+57,G__ARF_2__iaa_4,,1.0,"('D__ARF_2__iaa_4',)",promoter
+58,G__ARF_3,,1.0,"('ARF_3',)",promoter
+59,G__ARF_3__ARF_3,,1.0,"('D__ARF_3__ARF_3',)",promoter
+60,G__ARF_3__ARF_4,,1.0,"('D__ARF_3__ARF_4',)",promoter
+61,G__ARF_3__iaa_1,,1.0,"('D__ARF_3__iaa_1',)",promoter
+62,G__ARF_3__iaa_2,,1.0,"('D__ARF_3__iaa_2',)",promoter
+63,G__ARF_3__iaa_3,,1.0,"('D__ARF_3__iaa_3',)",promoter
+64,G__ARF_3__iaa_4,,1.0,"('D__ARF_3__iaa_4',)",promoter
+65,G__ARF_4,,1.0,"('ARF_4',)",promoter
+66,G__ARF_4__ARF_4,,1.0,"('D__ARF_4__ARF_4',)",promoter
+67,G__ARF_4__iaa_1,,1.0,"('D__ARF_4__iaa_1',)",promoter
+68,G__ARF_4__iaa_2,,1.0,"('D__ARF_4__iaa_2',)",promoter
+69,G__ARF_4__iaa_3,,1.0,"('D__ARF_4__iaa_3',)",promoter
+70,G__ARF_4__iaa_4,,1.0,"('D__ARF_4__iaa_4',)",promoter
+71,R__iaa_1,RNA for protein iaa_1,1.0,(),rna
+72,R__iaa_2,RNA for protein iaa_2,1.0,(),rna
+73,R__iaa_3,RNA for protein iaa_3,1.0,(),rna
+74,R__iaa_4,RNA for protein iaa_4,1.0,(),rna
+75,iaa_1,,1.0,(),IAA
+76,iaa_2,,1.0,(),IAA
+77,iaa_3,,1.0,(),IAA
+78,iaa_4,,1.0,(),IAA
