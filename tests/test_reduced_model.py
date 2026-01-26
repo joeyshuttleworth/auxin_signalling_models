@@ -80,7 +80,6 @@ class TestReducedModel:
             asp_model = reduced_asp_class(**kwargs)
             res, success = self.generate_solve_ode(asp_model, i)
 
-            res = res / res.max(axis=1)[:, None]
             ts = np.linspace(0, 1, res.shape[0])
             ax.plot(ts, res,
                     label=asp_model.get_state_variable_names(include_promoter_vars=False))

@@ -81,7 +81,8 @@ class AuxinSignallingPathway:
 
         unbound_promoter = self.add_state("G", description="Unbound promoter state",
                                           category="promoter")
-        promoter_variables = []
+        promoter_variables = [unbound_promoter]
+
         for promoter in [p for p in promoter_labels if p != "G"]:
             components = promoter.split("__")[1:]
 
