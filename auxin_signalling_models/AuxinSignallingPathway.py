@@ -1284,7 +1284,7 @@ class AuxinSignallingPathway:
         :returns: a sorted dictionary of parameter substitutions
         """
 
-        return _sorted_dict(self.parameter_substitution_dict)
+        return _sorted_dict(self.parameter_substitution_dict())
 
     def pretty_print_parameter_dict(self):
         """Print all model parameters in a LaTeX-maths format.
