@@ -1,4 +1,5 @@
 ,name,description,default_value
+<<<<<<< HEAD
 0,d__D__ARF_1__iaa_1,Dissociation rate of dimer D__ARF_1__iaa_1,0.1
 1,k__arf__all,production rate of ARF proteins,1.0
 2,k__G__ARF_1__ARF_3__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__ARF_3,1.0
@@ -144,3 +145,150 @@
 142,d__D__iaa_1__iaa_3,Dissociation rate of dimer D__iaa_1__iaa_3,0.1
 143,k__G__ARF_1__ARF_2,binding rate for promoter G__ARF_1__ARF_2,1.0
 144,k__D__ARF_2__iaa_3,Association rate of dimer D__ARF_2__iaa_3,0.001
+=======
+0,d__D__iaa_1__iaa_2,Dissociation rate of dimer D__iaa_1__iaa_2,0.1
+1,k__D__ARF_1__iaa_3,Association rate of dimer D__ARF_1__iaa_3,0.001
+2,k__D__iaa_3__iaa_3,Association rate of dimer D__iaa_3__iaa_3,0.001
+3,d__D__ARF_1__ARF_2,Dissociation rate of dimer D__ARF_1__ARF_2,0.1
+4,k__G__ARF_2__iaa_3,binding rate for promoter G__ARF_2__iaa_3,1.0
+5,k__G__ARF_1__iaa_2__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__iaa_2,1.0
+6,k__G__ARF_3__iaa_3__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_3__iaa_3,1.0
+7,k__G__ARF_1__ARF_2,binding rate for promoter G__ARF_1__ARF_2,1.0
+8,k__G__ARF_2__ARF_2__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_2__ARF_2,1.0
+9,d__G__ARF_1__ARF_3,"dissociation rate for promoter{'name': 'G__ARF_1__ARF_3', 'description': '', 'components': ('D__ARF_1__ARF_3',)}",1.0
+10,d__D__ARF_3__ARF_3,Dissociation rate of dimer D__ARF_3__ARF_3,0.1
+11,k__G__ARF_1__iaa_3,binding rate for promoter G__ARF_1__iaa_3,1.0
+12,k__G__ARF_1__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_1,1.0
+13,d__iaa_3__x,rate of auxin-mediated decay of Aux/IAA,0.1
+14,k__G__ARF_1__iaa_2__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_1__iaa_2,1.0
+15,k__G__ARF_1__ARF_1__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_1__ARF_1,1.0
+16,d__D__ARF_1__ARF_3,Dissociation rate of dimer D__ARF_1__ARF_3,0.1
+17,k__G__ARF_2__ARF_3__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_2__ARF_3,1.0
+18,k__D__ARF_1__ARF_3,Association rate of dimer D__ARF_1__ARF_3,0.001
+19,k__D__ARF_3__iaa_3,Association rate of dimer D__ARF_3__iaa_3,0.001
+20,k__G__ARF_3__iaa_2__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_3__iaa_2,1.0
+21,d__G__ARF_1__ARF_1,"dissociation rate for promoter{'name': 'G__ARF_1__ARF_1', 'description': '', 'components': ('D__ARF_1__ARF_1',)}",1.0
+22,k__G__ARF_3__iaa_2__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_3__iaa_2,1.0
+23,k__G__ARF_2__ARF_2,binding rate for promoter G__ARF_2__ARF_2,1.0
+24,k__G__ARF_2__iaa_1__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_2__iaa_1,1.0
+25,k__G__ARF_2__iaa_2,binding rate for promoter G__ARF_2__iaa_2,1.0
+26,k__G__ARF_2__ARF_3__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_2__ARF_3,1.0
+27,k__arf__all,production rate of ARF proteins,1.0
+28,k__G__ARF_2__iaa_3__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_2__iaa_3,1.0
+29,d__D__ARF_2__iaa_3,Dissociation rate of dimer D__ARF_2__iaa_3,0.1
+30,k__G__ARF_1__ARF_3,binding rate for promoter G__ARF_1__ARF_3,1.0
+31,k__G__ARF_2__iaa_1__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_2__iaa_1,1.0
+32,k__D__ARF_3__iaa_2,Association rate of dimer D__ARF_3__iaa_2,0.001
+33,d__G__ARF_1,"dissociation rate for promoter{'name': 'G__ARF_1', 'description': '', 'components': ('ARF_1',)}",1.0
+34,k__G__ARF_1__ARF_2__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_1__ARF_2,1.0
+35,k__G__ARF_1__iaa_2,binding rate for promoter G__ARF_1__iaa_2,1.0
+36,d__G__ARF_2__iaa_1,"dissociation rate for promoter{'name': 'G__ARF_2__iaa_1', 'description': '', 'components': ('D__ARF_2__iaa_1',)}",1.0
+37,d__iaa_2__x,rate of auxin-mediated decay of Aux/IAA,0.1
+38,d__D__ARF_1__iaa_1,Dissociation rate of dimer D__ARF_1__iaa_1,0.1
+39,d__iaa_1__x,rate of auxin-mediated decay of Aux/IAA,0.1
+40,k__G__ARF_1__ARF_1__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_1__ARF_1,1.0
+41,k__G__ARF_1__ARF_2__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_1__ARF_2,1.0
+42,k__D__ARF_1__iaa_2,Association rate of dimer D__ARF_1__iaa_2,0.001
+43,k__G__ARF_2__ARF_3__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_2__ARF_3,1.0
+44,k__D__ARF_1__iaa_1,Association rate of dimer D__ARF_1__iaa_1,0.001
+45,d__G__ARF_3__iaa_2,"dissociation rate for promoter{'name': 'G__ARF_3__iaa_2', 'description': '', 'components': ('D__ARF_3__iaa_2',)}",1.0
+46,k__R__iaa_3__iaa_3,Rate of production of iaa_3 fromRNA R__iaa_3,0.0
+47,k__G__ARF_3__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_3,1.0
+48,k__G__ARF_3__iaa_3__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_3__iaa_3,1.0
+49,k__G__ARF_3__ARF_3__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_3__ARF_3,1.0
+50,d__D__ARF_1__iaa_2,Dissociation rate of dimer D__ARF_1__iaa_2,0.1
+51,k__D__ARF_2__iaa_3,Association rate of dimer D__ARF_2__iaa_3,0.001
+52,d__G__ARF_2__ARF_2,"dissociation rate for promoter{'name': 'G__ARF_2__ARF_2', 'description': '', 'components': ('D__ARF_2__ARF_2',)}",1.0
+53,k__G__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G,1.0
+54,k__G__ARF_2__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_2,1.0
+55,k__G__ARF_3__iaa_3,binding rate for promoter G__ARF_3__iaa_3,1.0
+56,k__G__ARF_2__iaa_3__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_2__iaa_3,1.0
+57,k__G__ARF_2__iaa_3__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_2__iaa_3,1.0
+58,k__G__ARF_3__ARF_3,binding rate for promoter G__ARF_3__ARF_3,1.0
+59,k__G__ARF_2__iaa_2__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_2__iaa_2,1.0
+60,k__G__ARF_3__iaa_2,binding rate for promoter G__ARF_3__iaa_2,1.0
+61,k__D__iaa_2__iaa_3,Association rate of dimer D__iaa_2__iaa_3,0.001
+62,d__D__ARF_3__iaa_3,Dissociation rate of dimer D__ARF_3__iaa_3,0.1
+63,k__G__ARF_1__iaa_1__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__iaa_1,1.0
+64,k__G__ARF_1__ARF_2__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__ARF_2,1.0
+65,d__iaa__all,decay rate of Aux/IAAs,1.0
+66,k__G__ARF_1__ARF_1__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__ARF_1,1.0
+67,k__G__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G,1.0
+68,k__D__ARF_2__ARF_3,Association rate of dimer D__ARF_2__ARF_3,0.001
+69,k__D__ARF_1__ARF_2,Association rate of dimer D__ARF_1__ARF_2,0.001
+70,d__D__iaa_2__iaa_3,Dissociation rate of dimer D__iaa_2__iaa_3,0.1
+71,k__G__ARF_1__iaa_3__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_1__iaa_3,1.0
+72,d__G__ARF_3__iaa_1,"dissociation rate for promoter{'name': 'G__ARF_3__iaa_1', 'description': '', 'components': ('D__ARF_3__iaa_1',)}",1.0
+73,k__G__ARF_3,binding rate for promoter G__ARF_3,1.0
+74,k__G__ARF_3__iaa_3__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_3__iaa_3,1.0
+75,k__G__ARF_3__iaa_1__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_3__iaa_1,1.0
+76,k__G__ARF_2__iaa_2__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_2__iaa_2,1.0
+77,d__D__ARF_1__iaa_3,Dissociation rate of dimer D__ARF_1__iaa_3,0.1
+78,k__G__ARF_1__ARF_3__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__ARF_3,1.0
+79,k__G__ARF_3__iaa_1,binding rate for promoter G__ARF_3__iaa_1,1.0
+80,k__G__ARF_1__iaa_3__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_1__iaa_3,1.0
+81,k__G__ARF_1__ARF_3__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_1__ARF_3,1.0
+82,k__D__ARF_2__iaa_1,Association rate of dimer D__ARF_2__iaa_1,0.001
+83,d__D__iaa_3__iaa_3,Dissociation rate of dimer D__iaa_3__iaa_3,0.1
+84,k__D__iaa_1__iaa_1,Association rate of dimer D__iaa_1__iaa_1,0.001
+85,d__G__ARF_1__ARF_2,"dissociation rate for promoter{'name': 'G__ARF_1__ARF_2', 'description': '', 'components': ('D__ARF_1__ARF_2',)}",1.0
+86,k__D__ARF_1__ARF_1,Association rate of dimer D__ARF_1__ARF_1,0.001
+87,d__G__ARF_1__iaa_1,"dissociation rate for promoter{'name': 'G__ARF_1__iaa_1', 'description': '', 'components': ('D__ARF_1__iaa_1',)}",1.0
+88,k__G__ARF_3__iaa_1__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_3__iaa_1,1.0
+89,d__R,RNA decay rate,0.01
+90,k__G__ARF_1__ARF_1,binding rate for promoter G__ARF_1__ARF_1,1.0
+91,k__D__iaa_1__iaa_3,Association rate of dimer D__iaa_1__iaa_3,0.001
+92,k__G__ARF_1__ARF_3__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_1__ARF_3,1.0
+93,k__G__ARF_1__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_1,1.0
+94,k__G__ARF_2,binding rate for promoter G__ARF_2,1.0
+95,d__D__ARF_3__iaa_2,Dissociation rate of dimer D__ARF_3__iaa_2,0.1
+96,k__R__iaa_1__iaa_1,Rate of production of iaa_1 fromRNA R__iaa_1,0.0
+97,d__D__ARF_2__ARF_3,Dissociation rate of dimer D__ARF_2__ARF_3,0.1
+98,d__D__iaa_2__iaa_2,Dissociation rate of dimer D__iaa_2__iaa_2,0.1
+99,d__G__ARF_1__iaa_3,"dissociation rate for promoter{'name': 'G__ARF_1__iaa_3', 'description': '', 'components': ('D__ARF_1__iaa_3',)}",1.0
+100,k__D__ARF_2__iaa_2,Association rate of dimer D__ARF_2__iaa_2,0.001
+101,k__G__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G,1.0
+102,k__G__ARF_3__iaa_2__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_3__iaa_2,1.0
+103,k__D__iaa_1__iaa_2,Association rate of dimer D__iaa_1__iaa_2,0.001
+104,d__D__ARF_2__iaa_1,Dissociation rate of dimer D__ARF_2__iaa_1,0.1
+105,k__G__ARF_1__iaa_1,binding rate for promoter G__ARF_1__iaa_1,1.0
+106,d__G__ARF_3__iaa_3,"dissociation rate for promoter{'name': 'G__ARF_3__iaa_3', 'description': '', 'components': ('D__ARF_3__iaa_3',)}",1.0
+107,d__G__ARF_2__iaa_2,"dissociation rate for promoter{'name': 'G__ARF_2__iaa_2', 'description': '', 'components': ('D__ARF_2__iaa_2',)}",1.0
+108,k__G__ARF_3__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_3,1.0
+109,k__G__ARF_1,binding rate for promoter G__ARF_1,1.0
+110,k__G__ARF_2__ARF_3,binding rate for promoter G__ARF_2__ARF_3,1.0
+111,k__G__ARF_2__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_2,1.0
+112,k__G__ARF_2__ARF_2__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_2__ARF_2,1.0
+113,k__G__ARF_3__ARF_3__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_3__ARF_3,1.0
+114,d__G__ARF_1__iaa_2,"dissociation rate for promoter{'name': 'G__ARF_1__iaa_2', 'description': '', 'components': ('D__ARF_1__iaa_2',)}",1.0
+115,k__G__ARF_3__iaa_1__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_3__iaa_1,1.0
+116,k__G__ARF_3__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_3,1.0
+117,d__D__iaa_1__iaa_3,Dissociation rate of dimer D__iaa_1__iaa_3,0.1
+118,k__G__ARF_1__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1,1.0
+119,d__G__ARF_3,"dissociation rate for promoter{'name': 'G__ARF_3', 'description': '', 'components': ('ARF_3',)}",1.0
+120,k__D__ARF_3__iaa_1,Association rate of dimer D__ARF_3__iaa_1,0.001
+121,d__D__ARF_2__ARF_2,Dissociation rate of dimer D__ARF_2__ARF_2,0.1
+122,d__D__iaa_1__iaa_1,Dissociation rate of dimer D__iaa_1__iaa_1,0.1
+123,d__D__ARF_1__ARF_1,Dissociation rate of dimer D__ARF_1__ARF_1,0.1
+124,k__D__ARF_2__ARF_2,Association rate of dimer D__ARF_2__ARF_2,0.001
+125,d__G__ARF_2__iaa_3,"dissociation rate for promoter{'name': 'G__ARF_2__iaa_3', 'description': '', 'components': ('D__ARF_2__iaa_3',)}",1.0
+126,d__D__ARF_3__iaa_1,Dissociation rate of dimer D__ARF_3__iaa_1,0.1
+127,k__G__ARF_2__iaa_1,binding rate for promoter G__ARF_2__iaa_1,1.0
+128,k__G__ARF_2__iaa_1__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_2__iaa_1,1.0
+129,d__G__ARF_2__ARF_3,"dissociation rate for promoter{'name': 'G__ARF_2__ARF_3', 'description': '', 'components': ('D__ARF_2__ARF_3',)}",1.0
+130,k__R__iaa_2__iaa_2,Rate of production of iaa_2 fromRNA R__iaa_2,0.0
+131,k__G__ARF_1__iaa_1__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_1__iaa_1,1.0
+132,d__G__ARF_3__ARF_3,"dissociation rate for promoter{'name': 'G__ARF_3__ARF_3', 'description': '', 'components': ('D__ARF_3__ARF_3',)}",1.0
+133,k__G__ARF_2__ARF_2__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_2__ARF_2,1.0
+134,k__G__ARF_1__iaa_3__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__iaa_3,1.0
+135,k__D__ARF_3__ARF_3,Association rate of dimer D__ARF_3__ARF_3,0.001
+136,k__G__ARF_2__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_2,1.0
+137,k__D__iaa_2__iaa_2,Association rate of dimer D__iaa_2__iaa_2,0.001
+138,k__G__ARF_2__iaa_2__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_2__iaa_2,1.0
+139,d__D__ARF_2__iaa_2,Dissociation rate of dimer D__ARF_2__iaa_2,0.1
+140,k__G__ARF_3__ARF_3__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_3__ARF_3,1.0
+141,k__G__ARF_1__iaa_2__R__iaa_2,Rate of transcription for R__iaa_2 for promoter G__ARF_1__iaa_2,1.0
+142,d__arf__all,decay rate of ARF proteins,1.0
+143,d__G__ARF_2,"dissociation rate for promoter{'name': 'G__ARF_2', 'description': '', 'components': ('ARF_2',)}",1.0
+144,k__G__ARF_1__iaa_1__R__iaa_3,Rate of transcription for R__iaa_3 for promoter G__ARF_1__iaa_1,1.0
+>>>>>>> 37d17893226a0473ea927e54491e4b7bb3675a82

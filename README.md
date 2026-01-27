@@ -23,7 +23,7 @@ First generate a virtual environment, `.venv`:
 ```
 python3 -m venv .venv
 ```
-
+ 
 Then install the necessary packages
 
 ```
