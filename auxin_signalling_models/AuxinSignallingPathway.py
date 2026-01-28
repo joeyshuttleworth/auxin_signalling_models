@@ -864,11 +864,18 @@ class AuxinSignallingPathway:
 
         return _sorted_dict(ic_dict)
 
-    def get_default_parameters(self, parameter_subs_dict: dict = None):
+    def get_default_parameters(self, parameter_subs_dict: dict = None,
+                               ignore_unused: bool = False):
         """Return a default parameter set.
 
+        :param parameter_subs_dict: Dictionary of parameter substitutions to apply
+        :param ignore_unused: If True, remove parameters that don't appear in model equations
         :return: a dictionary of parameter values
         """
+
+        if ignore_unused:
+            _, _, parameters, _ = self.generate_ode_system(parameter_subs_dict)
+            return parameters
 
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict.copy()
