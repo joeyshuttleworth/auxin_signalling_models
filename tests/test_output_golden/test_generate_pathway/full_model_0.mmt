@@ -2,14 +2,14 @@
 name: AuxinSignallingPathway
 # Initial values
 NAP.ARF_1           = 1
-NAP.D__ARF_1__ARF_1 = 1
-NAP.D__ARF_1__iaa_1 = 1
-NAP.D__iaa_1__iaa_1 = 1
-NAP.G__ARF_1        = 1
-NAP.G__ARF_1__ARF_1 = 1
-NAP.G__ARF_1__iaa_1 = 1
-NAP.R__iaa_1        = 1
-NAP.iaa_1           = 1
+NAP.D__ARF_1__ARF_1 = 0.1
+NAP.D__ARF_1__iaa_1 = 0.1
+NAP.D__iaa_1__iaa_1 = 0.1
+NAP.G__ARF_1        = 0
+NAP.G__ARF_1__ARF_1 = 0
+NAP.G__ARF_1__iaa_1 = 0
+NAP.R__iaa_1        = 0
+NAP.iaa_1           = 0.1
 
 [NAP]
 dot(ARF_1) = -2 * ARF_1^2 * k__D__ARF_1__ARF_1 - ARF_1 * d__arf__all - ARF_1 * iaa_1 * k__D__ARF_1__iaa_1 + 2 * D__ARF_1__ARF_1 * d__D__ARF_1__ARF_1 + D__ARF_1__iaa_1 * d__D__ARF_1__iaa_1 + k__arf__all
