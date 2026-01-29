@@ -189,8 +189,7 @@ class TestReducedModel:
 
     def test_output_julia(self, request):
         ignore_golden = request.config.getoption("ignore_golden")
-        halfway = int(len(kwargs_list) / 2)
-        for i, kwargs in enumerate(kwargs_list[:halfway]):
+        for i, kwargs in enumerate(kwargs_list):
             asp_model_r = reduced_asp_class(**kwargs)
 
             jl_out = asp_model_r.output_julia()

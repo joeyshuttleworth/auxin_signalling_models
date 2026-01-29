@@ -62,14 +62,16 @@ class AuxinSignallingPathway:
         self.parameter_sub_dict = {}
 
         arf_variable_labels = [f"ARF_{i + 1}" for i in range(self.nARFs)]
-        iaa_variable_labels = [f"iaa_{i + 1}" for i in range(self.nARFs)]
+        iaa_variable_labels = [f"iaa_{i + 1}" for i in range(self.nIAAs)]
 
         #  Initialise parameter symbols
-        self.arf_variables = [self.add_state(a, category="ARF")
+        self.arf_variables = [self.add_state(a, category="ARF",
+                                             initial_condition=1.0)
                               for a in arf_variable_labels]
 
-        self.iaa_variables = [self.add_state(
-            i, category="IAA") for i in iaa_variable_labels]
+        self.iaa_variables = [self.add_state(i, category="IAA",
+                                             initial_condition=0.1)
+                              for i in iaa_variable_labels]
 
         promoter_labels = ["G"] + [f"G__{arf1}__{arf2}"
                                    for arf1 in arf_variable_labels
@@ -80,7 +82,7 @@ class AuxinSignallingPathway:
                for iaa in iaa_variable_labels]
 
         unbound_promoter = self.add_state("G", description="Unbound promoter state",
-                                          category="promoter")
+                                          category="promoter", initial_condition=1.0)
         promoter_variables = [unbound_promoter]
 
         for promoter in [p for p in promoter_labels if p != "G"]:
@@ -90,7 +92,8 @@ class AuxinSignallingPathway:
                 components = [f"D__{'__'.join(components)}"]
 
             _promoter_var = self.add_state(promoter, category="promoter",
-                                           components=components)
+                                           components=components,
+                                           initial_condition=0.0)
             promoter_variables.append(_promoter_var)
 
         self.promoter_variables = promoter_variables
@@ -106,7 +109,8 @@ class AuxinSignallingPathway:
             _dimer_var = self.add_state(dimer, category='dimer',
                                         components=components,
                                         description=f"Dimer of {components[0]} protein "
-                                        f"and {components[1]} protein")
+                                        f"and {components[1]} protein",
+                                        initial_condition=0.1)
             dimer_variables.append(_dimer_var)
 
         self.dimer_variables = dimer_variables
@@ -120,14 +124,17 @@ class AuxinSignallingPathway:
 
         for r in rna_var_labels:
             _rna_var = self.add_state(r, category="rna",
-                                      description=f"RNA for protein {r.split('__')[1]}")
+                                      description=f"RNA for protein {r.split('__')[1]}",
+                                      initial_condition=0.0)
             rna_variables.append(_rna_var)
 
         self.rna_variables = rna_variables
 
         self.auxin_variable_label = 'x'
         self.auxin_variable = self.add_state(
-            self.auxin_variable_label, category='None')
+            self.auxin_variable_label, category='None',
+            initial_condition=1.0
+        )
 
         self.all_state_variables = self.arf_variables + self.iaa_variables \
             + self.promoter_variables + dimer_variables \
@@ -864,11 +871,18 @@ class AuxinSignallingPathway:
 
         return _sorted_dict(ic_dict)
 
-    def get_default_parameters(self, parameter_subs_dict: dict = None):
+    def get_default_parameters(self, parameter_subs_dict: dict = None,
+                               ignore_unused: bool = False):
         """Return a default parameter set.
 
+        :param parameter_subs_dict: Dictionary of parameter substitutions to apply
+        :param ignore_unused: If True, remove parameters that don't appear in model equations
         :return: a dictionary of parameter values
         """
+
+        if ignore_unused:
+            _, _, parameters, _ = self.generate_ode_system(parameter_subs_dict)
+            return parameters
 
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict.copy()

@@ -104,7 +104,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         if reduced:
             state_vars = super().get_state_variable_names(include_promoter_vars=True)
             promoter_vars = [
-                s.name for s in self.get_state_variables() if s.category == 'promoter']
+                s.name for s in self.get_state_variables() if s.category == "promoter"]
             promoter_odes = sp.Matrix([[ode for state_var, ode in zip(state_vars, odes)
                                         if state_var in promoter_vars]]).T
 
