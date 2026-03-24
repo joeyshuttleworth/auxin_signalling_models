@@ -380,14 +380,14 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return _rhs_func
 
-    def get_promoter_state_vars(self, *args, **kwargs):
+    def get_promoter_state_variables(self, *args, **kwargs):
         """List and sort the promoter state variables found in the model.
 
         :return: Sorted list of promoter state variables
         """
 
         all_states = self.get_state_variables(*args, **kwargs)
-        return [s for s in all_states if s.catgory == "promoter"]
+        return [s for s in all_states if s.category == "promoter"]
 
     def get_promoter_steady_state_expr(self, parameter_subs_dict=None):
         """Make a sympy expression giving quasi steady state promoter variables
