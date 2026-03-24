@@ -1336,6 +1336,10 @@ class AuxinSignallingPathway:
         :returns: A LaTeX-maths string
         """
         parts = par.split("__")
+
+        if len(parts) < 3:
+            return par
+
         head = parts[0]
         top = parts[1]
         rest = parts[2:]
