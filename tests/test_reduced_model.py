@@ -23,20 +23,20 @@ model_names = [f"model{i}" for i in range(15)]
 logging.info("outputting to %s", test_output_dir)
 
 kwargs_list = [
-    {'nARFs': 1, 'nIAAs': 1},
-    {'nARFs': 2, 'nIAAs': 1},
-    {'nARFs': 2, 'nIAAs': 2},
+    {'nARFs': 1, 'nIAAs': 1, 'include_arf_transcription': False},
+    {'nARFs': 2, 'nIAAs': 1, 'include_arf_transcription': False},
+    {'nARFs': 2, 'nIAAs': 2, 'include_arf_transcription': False},
 ]
 
 # Add transcription flag to kwarg list
 arg_list_with_arf = [{**d, 'include_arf_transcription': True}
                      for d in kwargs_list]
+
 kwargs_list = [item for pair in zip(kwargs_list, arg_list_with_arf)
                for item in pair]
 
 
 class TestReducedModel:
-
     def test_graph_generation(self):
         for i, kwargs in enumerate(kwargs_list):
             asp_model = reduced_asp_class(**kwargs)
@@ -138,7 +138,8 @@ class TestReducedModel:
     def test_model_with_arf_transcription(self, request):
         ignore_golden = request.config.getoption("ignore_golden")
 
-        for i, kwargs in enumerate(kwargs_list[:2]):
+        for i, _kwargs in enumerate(kwargs_list[:2]):
+            kwargs = _kwargs.copy()
             kwargs['include_arf_transcription'] = True
             asp_model_r = reduced_asp_class(**kwargs)
             solver_r = asp_model_r.make_forward_solver()
@@ -200,13 +201,27 @@ class TestReducedModel:
 
             if not ignore_golden:
                 # Compare against golden version
+                print(f"Testing model {asp_model_r.get_model_name()}")
+                print(kwargs_list)
                 golden_file = os.path.join(golden_dir, Path(output_dir).name,
                                            save_fname)
 
                 with open(golden_file, "r") as fin:
                     jl_str = fin.read()
-
                     assert jl_str == jl_out
+
+    def test_get_promoter_state_variables(self):
+        for i, kwargs in enumerate(kwargs_list):
+            asp_model_r = reduced_asp_class(**kwargs)
+
+            promoter_vars = asp_model_r.get_promoter_state_variables()
+
+            for v in promoter_vars:
+                assert v.category == "promoter"
+
+            assert len(promoter_vars) == len(set(promoter_vars))
+
+        return
 
     def test_get_jacobian(self):
         #  TODO Check answer against reference jacobian
