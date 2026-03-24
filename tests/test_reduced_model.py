@@ -201,8 +201,6 @@ class TestReducedModel:
 
             if not ignore_golden:
                 # Compare against golden version
-                print(f"Testing model {asp_model_r.get_model_name()}")
-                print(kwargs_list)
                 golden_file = os.path.join(golden_dir, Path(output_dir).name,
                                            save_fname)
 
