@@ -9,5 +9,5 @@ auxin_signalling_models documentation
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-        
+
    auxin_signalling_models

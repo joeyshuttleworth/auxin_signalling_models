@@ -23,7 +23,7 @@ First generate a virtual environment, `.venv`:
 ```
 python3 -m venv .venv
 ```
- 
+
 Then install the necessary packages
 
 ```
@@ -51,6 +51,6 @@ python3 -m pytest
 
 The code in Jupyter Notebooks may be run by installing Jupyter and running:
 ```
-jupiter-notebook
+jupyter-notebook
 ```
 in the console.
