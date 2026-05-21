@@ -31,7 +31,7 @@ Then install the necessary packages
 
 ```
 python3 -m pip --upgrade pip
-python3 -m pip install -e .
+python3 -m pip install -e .[test]
 ```
 
 ### Documentation
