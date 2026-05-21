@@ -17,6 +17,9 @@ simulations nad statistical analysis.
 
 The following installation instructions assume an environment with Python (version >= 3.10) and pip installed. The code has been tested under a Linux (Ubuntu) environment.
 
+#### Requirements for notebooks
+There are additional requirements for the jupyter notebooks found in `notebooks`. These are listed in `requirements.txt`
+
 ### Installing
 
 First generate a virtual environment, `.venv`:
