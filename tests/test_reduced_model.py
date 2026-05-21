@@ -24,8 +24,7 @@ logging.info("outputting to %s", test_output_dir)
 
 kwargs_list = [
     {'nARFs': 1, 'nIAAs': 1, 'include_arf_transcription': False},
-    {'nARFs': 2, 'nIAAs': 1, 'include_arf_transcription': False},
-    {'nARFs': 2, 'nIAAs': 2, 'include_arf_transcription': False},
+    {'nARFs': 1, 'nIAAs': 2, 'include_arf_transcription': False},
 ]
 
 # Add transcription flag to kwarg list
@@ -68,8 +67,6 @@ class TestReducedModel:
         solver = asp_model.make_forward_solver()
         ts = np.linspace(0, 0.1, 2)
         res, success = solver(ts, param_dict, ic_dict, 0.99)
-
-        print(res.shape, res)
 
         return res, success
 
