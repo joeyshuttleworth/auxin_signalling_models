@@ -305,7 +305,7 @@ class AuxinSignallingPathway:
             prot = rna.name.split('__')[1]
 
             production_rate = f"k__{rna.name}__{prot}"
-            rate_default_val = 0.0
+            rate_default_val = 1.0
 
             self.add_model_parameter(production_rate, rate_default_val,
                                      f"Rate of production of {prot} from"
