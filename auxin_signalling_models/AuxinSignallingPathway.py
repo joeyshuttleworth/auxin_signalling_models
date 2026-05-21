@@ -750,13 +750,13 @@ class AuxinSignallingPathway:
             rhs_func = self.generate_rhs_func(parameter_subs_dict=parameter_subs_dict)
 
             def deriv_func(t, y, params, aux):
-                return rhs_func(y, t, params, aux)
+                return rhs_func(y, t, params, aux).flatten()
 
-            jac_func = self.get_jacobian_func()
+            jac_func = self.generate_jacobian_func(parameter_subs_dict=parameter_subs_dict)
             sol = solve_ivp(
                 deriv_func, ts[[0, -1]],
                 ic.copy(),
-                t_eval=ts.copy(),
+                t_eval=ts,
                 method="LSODA",
                 args=[params, [aux]],
                 jac=lambda t, y, p, aux: jac_func(y, t, p, aux)
@@ -767,19 +767,24 @@ class AuxinSignallingPathway:
 
         return solver
 
-    def generate_jacobian_func(self):
+    def generate_jacobian_func(self, parameter_subs_dict=None):
         odes, free_variables, _, \
             _ = self.generate_ode_system()
+
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
-        jacobian = odes.jacobian(self.get_state_variable_names())
+        state_var_syms = [sp.sympify(n) for n in self.get_state_variable_names()]
+        odes = odes.subs(parameter_subs_dict)
+        jacobian = odes.jacobian(state_var_syms)
 
         ic_dict = self.get_default_initial_conditions()
 
         state_variables = sp.Matrix([s for s in ic_dict])
-        params_dict = self.get_default_parameters()
+        params_dict = self.get_default_parameters(parameter_subs_dict)
         param_names = sp.Matrix(list(params_dict.keys()))
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
@@ -794,12 +799,6 @@ class AuxinSignallingPathway:
             return ret
 
         return jac_func
-
-    def get_jacobian_func(self):
-        if self.jac_func:
-            return self.jac_func
-        else:
-            return self.generate_jacobian_func()
 
     def generate_rhs_func(self, parameter_subs_dict: dict = None):
         odes, free_variables, parameters, \

@@ -8,7 +8,8 @@ from .AuxinSignallingPathway import AuxinSignallingPathway
 
 
 class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
-    def __init__(self, nARFs: int = 1, nIAAs: int = 1, aux_func: Callable[[float], float] = None, simple_promoter_states: bool = False,
+    def __init__(self, nARFs: int = 1, nIAAs: int = 1,
+                 aux_func: Callable[[float], float] = None, simple_promoter_states: bool = False,
                  **kwargs):
         """A simplified version of a auxin_signalling_pathway model, with
         promoter-protein dynamics simplified with a quasi steady-state
@@ -66,8 +67,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         self.add_model_parameter(
             "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
 
-        self.add_model_parameter(
-            "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
+            self.add_model_parameter(
+                "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
 
         for key in list(self.get_parameter_names()):
             if "bind" in key:
@@ -316,7 +317,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             G = 1.0 - np.sum(promoter_vals)
             promoter_vals = np.concatenate((np.array([G]), promoter_vals))
 
-            return _rhs_func(y, t, p, aux, promoter_vals)
+            return _rhs_func(y, t, p, aux, promoter_vals).flatten()
 
         return rhs_func
 
