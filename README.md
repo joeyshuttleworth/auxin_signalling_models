@@ -51,7 +51,7 @@ Tests can be run by entering
 ```
 python3 -m pytest
 ```
-
+#### Jupyter notebooks
 The code in Jupyter Notebooks may be run by installing Jupyter and running:
 ```
 jupyter-notebook
