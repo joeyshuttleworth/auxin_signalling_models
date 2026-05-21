@@ -9,15 +9,15 @@ import pandas as pd
 import seaborn as sns
 import sympy as sp
 from pyvis.network import Network
-from sympy.printing.julia import julia_code
 from scipy.integrate import solve_ivp
+from sympy.printing.julia import julia_code
 
 from .Parameter import Parameter
 from .Reaction import Reaction
 from .StateVariable import StateVariable
 
-
 _reserved_variable_names = ["_t"]
+
 
 class AuxinSignallingPathway:
 
@@ -747,12 +747,14 @@ class AuxinSignallingPathway:
 
             ts = np.array(ts)
 
-            rhs_func = self.generate_rhs_func(parameter_subs_dict=parameter_subs_dict)
+            rhs_func = self.generate_rhs_func(
+                parameter_subs_dict=parameter_subs_dict)
 
             def deriv_func(t, y, params, aux):
                 return rhs_func(y, t, params, aux).flatten()
 
-            jac_func = self.generate_jacobian_func(parameter_subs_dict=parameter_subs_dict)
+            jac_func = self.generate_jacobian_func(
+                parameter_subs_dict=parameter_subs_dict)
             sol = solve_ivp(
                 deriv_func, ts[[0, -1]],
                 ic.copy(),
@@ -777,7 +779,8 @@ class AuxinSignallingPathway:
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
-        state_var_syms = [sp.sympify(n) for n in self.get_state_variable_names()]
+        state_var_syms = [sp.sympify(n)
+                          for n in self.get_state_variable_names()]
         odes = odes.subs(parameter_subs_dict)
         jacobian = odes.jacobian(state_var_syms)
 
