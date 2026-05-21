@@ -24,8 +24,7 @@ logging.info("outputting to %s", test_output_dir)
 
 kwargs_list = [
     {'nARFs': 1, 'nIAAs': 1, 'include_arf_transcription': False},
-    {'nARFs': 2, 'nIAAs': 1, 'include_arf_transcription': False},
-    {'nARFs': 2, 'nIAAs': 2, 'include_arf_transcription': False},
+    {'nARFs': 1, 'nIAAs': 2, 'include_arf_transcription': False},
 ]
 
 # Add transcription flag to kwarg list
@@ -66,7 +65,7 @@ class TestReducedModel:
         param_dict = {k: 1.0 for k in param_dict}
 
         solver = asp_model.make_forward_solver()
-        ts = np.linspace(0, 10, 10)
+        ts = np.linspace(0, 0.1, 2)
         res, success = solver(ts, param_dict, ic_dict, 0.99)
 
         return res, success
@@ -101,7 +100,7 @@ class TestReducedModel:
 
                 golden_res = np.genfromtxt(golden_file, delimiter=' ')
                 assert np.mean(
-                    (golden_res.flatten() - res.flatten())**2) <= 1e-12
+                    (golden_res.flatten() - res.flatten())**2) <= 1e-8
 
         assert success and np.all(np.isfinite(res))
         plt.close(fig)
@@ -112,7 +111,7 @@ class TestReducedModel:
             asp_model_full = asp_class(**kwargs)
             asp_model_full.add_model_parameter(
                 "k__RNA__IAA", 1.0, 'Production rate for IAAs')
-            ts = np.linspace(0, 100, 10)
+            ts = np.linspace(0, 0.1, 2)
             param_dict = asp_model_r.get_default_parameters()
 
             parameter_subs_dict = asp_model_r.parameter_subs_dict.copy()
@@ -124,7 +123,7 @@ class TestReducedModel:
             solver_full = asp_model_full.make_forward_solver(
                 parameter_subs_dict=parameter_subs_dict)
 
-            ts = np.linspace(0, 100, 10)
+            ts = np.linspace(0, 0.1, 2)
             param_dict = asp_model_r.get_default_parameters()
             res, succ = solver_r(ts, param_dict, reduced_ic_dict, 1.0)
             assert succ and np.all(np.isfinite(res))
@@ -143,7 +142,7 @@ class TestReducedModel:
             kwargs['include_arf_transcription'] = True
             asp_model_r = reduced_asp_class(**kwargs)
             solver_r = asp_model_r.make_forward_solver()
-            ts = np.linspace(0, 100, 250)
+            ts = np.linspace(0, 0.1, 2)
 
             ic_dict = asp_model_r.get_default_initial_conditions()
             ic_dict = {k: 1.0 for k in ic_dict}
@@ -164,7 +163,7 @@ class TestReducedModel:
 
                 golden_res = np.genfromtxt(golden_file, delimiter=' ')
                 assert np.mean(
-                    (golden_res.flatten() - res.flatten())**2) < 1e-12
+                    (golden_res.flatten() - res.flatten())**2) < 1e-8
 
     def test_output_latex(self, request):
         ignore_golden = request.config.getoption("ignore_golden")

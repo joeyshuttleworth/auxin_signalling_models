@@ -36,9 +36,7 @@ dependencies = [
         'networkx>=3.4.2',
         'matplotlib>=3.7.0',
         'seaborn>=0.13.0',
-        'numba>=0.61.2',
-	        'pyvis>=0.3.2',
-        'numbalsoda @ git+https://git@github.com/NicholasWogan/numbalsoda@c9183b5bc75002bac5270339f0e0ca645f102b4d',
+        'pyvis>=0.3.2',
         "flake8-pyproject>=1.2.4"
 ]
 

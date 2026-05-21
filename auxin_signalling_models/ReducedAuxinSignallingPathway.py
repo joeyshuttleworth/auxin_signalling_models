@@ -1,17 +1,15 @@
 from typing import Callable, List
 
-import numba as nb
 import numpy as np
 import sympy as sp
-from numba import cfunc, njit
-from numbalsoda import lsoda_sig
 from sympy.printing.julia import julia_code
 
 from .AuxinSignallingPathway import AuxinSignallingPathway
 
 
 class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
-    def __init__(self, nARFs: int = 1, nIAAs: int = 1, aux_func: Callable[[float], float] = None, simple_promoter_states: bool = False,
+    def __init__(self, nARFs: int = 1, nIAAs: int = 1,
+                 aux_func: Callable[[float], float] = None, simple_promoter_states: bool = False,
                  **kwargs):
         """A simplified version of a auxin_signalling_pathway model, with
         promoter-protein dynamics simplified with a quasi steady-state
@@ -69,8 +67,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         self.add_model_parameter(
             "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
 
-        self.add_model_parameter(
-            "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
+        if self.include_arf_transcription:
+            self.add_model_parameter(
+                "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
 
         for key in list(self.get_parameter_names()):
             if "bind" in key:
@@ -154,74 +153,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return sorted(state_vars)
 
-    def make_cfunc_rhs(self, aux_func: Callable[[float], float] = None, parameter_subs_dict: dict = None):
-        """Generate a c function which evaluates the RHS of the ODE system.
-
-        :param aux_func: An optional, externally defined auxin-input
-            function
-        :param parameter_subs_dict: A dictionary of parameter
-            substitutions
-        :returns: a c function with signature lsoda_sig for use solving
-            our ODE system
-        """
-
-        if parameter_subs_dict is None:
-            parameter_subs_dict = self.parameter_subs_dict
-
-        promoter_vars = [s for s in
-                         self.get_state_variables()
-                         if s.category == "promoter"]
-
-        n_promoter_vars = len(promoter_vars)
-
-        # Number of params + 'free variables' i.e. auxin
-        n_data = len(self.get_default_parameters(self.parameter_subs_dict)) + 1
-        rhs_func = self.generate_rhs_func(parameter_subs_dict=parameter_subs_dict,
-                                          njitted=True)
-
-        promoter_expr_jac_func, inhomog_expr_func = self.get_promoter_ode_funcs(
-            parameter_subs_dict=parameter_subs_dict)
-
-        odes, free_variables, parameters, constraints =\
-            self.generate_ode_system(reduced=True,
-                                     parameter_subs_dict=parameter_subs_dict)
-        n_y = len(odes)
-
-        @cfunc(lsoda_sig)
-        def cfunc_rhs(t, y, dy, data):
-            y = nb.carray(y, n_y).astype(np.float64)
-            dy = nb.carray(dy, n_y)
-            data = nb.carray(data, n_data)
-
-            if aux_func:
-                aux = aux_func(t)
-            else:
-                aux = data[0]
-
-            aux = np.array([aux])
-
-            params = data[1:].copy().flatten().astype(np.float64)
-
-            promoter_vals = np.full(n_promoter_vars, 0.0)
-
-            # steady state doesn't depend on promoter states provided conservation
-            promoter_expr_jac = promoter_expr_jac_func(
-                y, params, aux).astype(np.float64)
-            inhomog_val = inhomog_expr_func(y, params, aux).astype(np.float64)
-            promoter_vals = np.linalg.solve(
-                promoter_expr_jac, -inhomog_val).flatten()
-            G = 1.0 - np.sum(promoter_vals)
-            promoter_vals = np.concatenate((np.array([G]), promoter_vals))
-
-            res = rhs_func(y, params,
-                           aux, promoter_vals).astype(np.float64).flatten()
-
-            assert res.shape == y.shape
-            dy[:] = res[:]
-            return
-
-        return cfunc_rhs
-
     def output_latex(self, **kwargs):
         """Construct a LaTeX string describing the model mathematically.
 
@@ -231,14 +162,12 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return super().output_latex(reduced=True, **kwargs)
 
-    def get_promoter_ode_funcs(self, parameter_subs_dict=None,
-                               njitted=True):
+    def get_promoter_ode_funcs(self, parameter_subs_dict=None):
         """Construct two functions used to compute the solution to the
         promoter-protein component of the model under a quasi steady-state
         assumption.
 
         :param parameter_subs_dict: A dictionary of parameter substitutions
-        :param njitted: If True, use numba to return JIT-compiled functions
 
         :return: 2-tuple - an expression for the jacobian of the derivative function, and an expression for the inhomogenous part
         """
@@ -281,10 +210,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         inhomog_expr_func = sp.lambdify(
             promoter_inputs, promoter_expr_inhomog)
-
-        if njitted:
-            promoter_expr_jac_func = njit(promoter_expr_jac_func)
-            inhomog_expr_func = njit(inhomog_expr_func)
 
         return promoter_expr_jac_func, inhomog_expr_func
 
@@ -337,19 +262,19 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return promoter_expr
 
-    def generate_rhs_func(self, njitted=True, parameter_subs_dict=None):
+    def generate_rhs_func(self, parameter_subs_dict=None,
+                          compute_QSS_values=True):
         """Generate a derivative function for the model.
 
-        Note that the returned function treats promoter variables as a
-        separate argument.
+        Note that the returned function treats promoter variables as a separate
+        argument.
 
-        :param njitted: If true, use numba to JIT-compile the returned
-            function
         :param parameter_subs_dict: A dictionary of parameter
             substitutions
         :returns: A derivative function for the model with parameters
             for the models state variables, parameters, free variables,
             and promoter states
+
         """
 
         odes, free_variables, parameters, \
@@ -373,12 +298,29 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             if str(s) not in input_symbols:
                 raise ValueError(f"symbol {s} not found in {input_symbols}")
 
-        _rhs_func = sp.lambdify((state_var_labels, param_names,
-                                 free_variables, promoter_var_labels), odes)
-        if njitted:
-            _rhs_func = njit(_rhs_func)
+        t_sym = sp.sympify("_t")
 
-        return _rhs_func
+        _rhs_func = sp.lambdify((state_var_labels, t_sym, param_names,
+                                 free_variables, promoter_var_labels), odes)
+        if not compute_QSS_values:
+            return _rhs_func
+
+        # steady state doesn't depend on promoter states provided conservation
+        promoter_expr_jac_func, inhomog_expr_func\
+            = self.get_promoter_ode_funcs(parameter_subs_dict=parameter_subs_dict)
+
+        def rhs_func(y, t, p, aux):
+            promoter_expr_jac = promoter_expr_jac_func(y, p, aux)\
+                .astype(np.float64)
+            inhomog_val = inhomog_expr_func(y, p, aux).astype(np.float64)
+            promoter_vals = np.linalg.solve(
+                promoter_expr_jac, -inhomog_val).flatten()
+            G = 1.0 - np.sum(promoter_vals)
+            promoter_vals = np.concatenate((np.array([G]), promoter_vals))
+
+            return _rhs_func(y, t, p, aux, promoter_vals).flatten()
+
+        return rhs_func
 
     def get_promoter_state_variables(self, *args, **kwargs):
         """List and sort the promoter state variables found in the model.
@@ -510,10 +452,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return code_str
 
-    def generate_jacobian_func(self, njitted: bool = False, parameter_subs_dict: dict = None):
+    def generate_jacobian_func(self, parameter_subs_dict: dict = None):
         """ Define a function which computes the jacobian of the dynamical system defined by the model
-
-        :param njitted: When True, return a JIT-compiled (numba.njit) version of the function
 
         :param parameter_subs_dict: A dict providing a list of parameter substituions to make
 
@@ -526,15 +466,16 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
                                                    reduced=True)
 
-        state_names = self.get_state_variables()
+        all_state_vars = self.get_state_variables()
+        state_vars = [v for v in all_state_vars if v.category != "promoter"]
+        state_names = [v.name for v in state_vars]
+
         param_names = list(parameters.keys())
 
-        inputs = (state_names, param_names, free_variables)
+        t_sym = sp.sympify("_t")
+        inputs = (state_names, t_sym, param_names, free_variables)
 
         jac_func = sp.lambdify(inputs, jac_expr)
-
-        if njitted:
-            njit(jac_func)
 
         return jac_func
 

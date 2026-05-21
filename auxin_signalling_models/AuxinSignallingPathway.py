@@ -4,22 +4,23 @@ from typing import Callable, List
 
 import myokit
 import networkx as nx
-import numba as nb
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import sympy as sp
-from numba import cfunc, njit
-from numbalsoda import lsoda, lsoda_sig
 from pyvis.network import Network
+from scipy.integrate import solve_ivp
 from sympy.printing.julia import julia_code
 
 from .Parameter import Parameter
 from .Reaction import Reaction
 from .StateVariable import StateVariable
 
+_reserved_variable_names = ["_t"]
+
 
 class AuxinSignallingPathway:
+
     def __init__(self, nARFs: int = 1, nIAAs: int = 1, include_arf_transcription: bool = False,
                  aux_func: Callable[[float], float] = None):
         """A graph-based representation of an auxin-signalling pathway in terms
@@ -349,6 +350,10 @@ class AuxinSignallingPathway:
             raise ValueError(
                 f"label:{label} is not a valid variable identifier")
 
+        if label in _reserved_variable_names:
+            raise ValueError(
+                f"label:{label} is a reserved variable identifier")
+
         if strict is None:
             strict = self.strict
 
@@ -383,6 +388,12 @@ class AuxinSignallingPathway:
         :raises ValueError: When strict is True and a duplicate state-
             variable is added
         """
+
+        if str(label) in _reserved_variable_names:
+            raise ValueError(
+                f"Tried to add variable, {label}, with reserved variable identifier"
+            )
+
         variable = StateVariable(label, **kwargs)
 
         if strict and label in self.graph.nodes():
@@ -695,9 +706,6 @@ class AuxinSignallingPathway:
             concentrations
         """
 
-        cfunc = self.make_cfunc_rhs(parameter_subs_dict=parameter_subs_dict)
-        cfunc_ptr = cfunc.address
-
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict.copy()
 
@@ -739,99 +747,63 @@ class AuxinSignallingPathway:
 
             ts = np.array(ts)
 
-            data = np.full(len(params) + 1, np.nan)
-            data[0] = aux
-            data[1:] = params.copy().flatten()
+            rhs_func = self.generate_rhs_func(
+                parameter_subs_dict=parameter_subs_dict)
 
-            return lsoda(cfunc_ptr, ic.copy().astype(np.float64),
-                         np.array(ts),
-                         data=data.astype(np.float64))
+            def deriv_func(t, y, params, aux):
+                return rhs_func(y, t, params, aux).flatten()
+
+            jac_func = self.generate_jacobian_func(
+                parameter_subs_dict=parameter_subs_dict)
+            sol = solve_ivp(
+                deriv_func, ts[[0, -1]],
+                ic.copy(),
+                t_eval=ts,
+                method="LSODA",
+                args=[params, [aux]],
+                jac=lambda t, y, p, aux: jac_func(y, t, p, aux)
+            )
+
+            success = True
+            return sol.y.T, success
 
         return solver
 
-    def get_cfunc_rhs(self, **kwargs):
-        if self.cfunc_rhs is None and not kwargs:
-            self.cfunc = self.make_cfunc_rhs()
-        elif kwargs:
-            return self.make_cfunc_rhs()
-
-        return self.cfunc_rhs
-
-    def make_cfunc_rhs(self, aux_func: Callable[[float], float] = None,
-                       parameter_subs_dict: dict = None):
-        """Generate a c function which evaluates the RHS of the ODE system.
-
-        :returns: a c function with signature lsoda_sig for use solving
-            our ODE system
-        """
-
-        n_y = len(self.get_state_variable_names())
-
-        # Number of params + 'free variables' i.e. auxin
-        n_data = len(self.get_default_parameters(parameter_subs_dict=parameter_subs_dict))\
-            + 1
-        rhs_func = self.generate_rhs_func(parameter_subs_dict=parameter_subs_dict,
-                                          njitted=True)
-
-        @cfunc(lsoda_sig)
-        def cfunc_rhs(t, y, dy, data):
-            y = nb.carray(y, n_y).astype(np.float64)
-            dy = nb.carray(dy, n_y)
-            data = nb.carray(data, n_data)
-
-            params = data[1:].copy().flatten().astype(np.float64)
-
-            if aux_func:
-                aux_func(t)
-            else:
-                aux = data[0:1]
-
-            res = rhs_func(y, params,
-                           aux).astype(np.float64).flatten().flatten()
-
-            assert (res.shape == y.shape)
-            dy[:] = res[:]
-            return
-
-        return cfunc_rhs
-
-    def generate_jacobian_func(self, njitted: bool = True):
+    def generate_jacobian_func(self, parameter_subs_dict=None):
         odes, free_variables, _, \
             _ = self.generate_ode_system()
+
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.parameter_subs_dict
 
         #  Create column vector of ode expressions
         odes = sp.Matrix([odes])
 
-        jacobian = odes.jacobian(self.get_state_variable_names())
+        state_var_syms = [sp.sympify(n)
+                          for n in self.get_state_variable_names()]
+        odes = odes.subs(parameter_subs_dict)
+        jacobian = odes.jacobian(state_var_syms)
 
         ic_dict = self.get_default_initial_conditions()
 
         state_variables = sp.Matrix([s for s in ic_dict])
-        params_dict = self.get_default_parameters()
+        params_dict = self.get_default_parameters(parameter_subs_dict)
         param_names = sp.Matrix(list(params_dict.keys()))
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
 
-        _jac_func = sp.lambdify((state_variables, param_names,
+        t_sym = sp.sympify("_t")
+
+        _jac_func = sp.lambdify((state_variables, t_sym, param_names,
                                  free_variables), jacobian)
-        _jac_func = njit(_jac_func)
 
-        def jac_func(y, p, x):
-            ret = _jac_func(y, p, x)
+        def jac_func(y, t, p, x):
+            ret = _jac_func(y, t, p, x)
             return ret
-
-        if njitted:
-            jac_func = njit(jac_func)
 
         return jac_func
 
-    def get_jacobian_func(self):
-        if self.jac_func:
-            return self.jac_func
-        else:
-            return self.generate_jacobian_func()
-
-    def generate_rhs_func(self, njitted: bool = True, parameter_subs_dict: dict = None):
+    def generate_rhs_func(self, parameter_subs_dict: dict = None):
         odes, free_variables, parameters, \
             _ = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
@@ -848,12 +820,11 @@ class AuxinSignallingPathway:
 
         param_names = [sp.sympify(p) for p in default_parameters.keys()]
 
-        free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
-        rhs_func = sp.lambdify((state_variables, param_names,
-                                free_variables), odes)
+        t_sym = sp.sympify("_t")
 
-        if njitted:
-            rhs_func = njit(rhs_func)
+        free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
+        rhs_func = sp.lambdify((state_variables, t_sym, param_names,
+                                free_variables), odes)
 
         return rhs_func
 
