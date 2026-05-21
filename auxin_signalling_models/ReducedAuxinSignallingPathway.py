@@ -67,6 +67,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         self.add_model_parameter(
             "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
 
+        if self.include_arf_transcription:
             self.add_model_parameter(
                 "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
 
