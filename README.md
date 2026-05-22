@@ -22,16 +22,17 @@ There are additional requirements for the jupyter notebooks found in `notebooks`
 
 ### Installing
 
-First generate a virtual environment, `.venv`:
+First generate and activate fresh virtual environment, `.venv`:
 ```
 python3 -m venv .venv
+activate .venv/bin/activate
 ```
 
 Then install the necessary packages
 
 ```
 python3 -m pip --upgrade pip
-python3 -m pip install -e .[test]
+python3 -m pip install -e .\[test\]
 ```
 
 ### Documentation
@@ -52,8 +53,27 @@ Tests can be run by entering
 python3 -m pytest
 ```
 #### Jupyter notebooks
-The code in Jupyter Notebooks may be run by installing Jupyter and running:
+Various example Jupyter notebooks are provided in `notebooks`.
+
+To run a notebook, first install the package as above but with the `[notebook]` dependencies.
+
 ```
-jupyter-notebook
+python3 -m venv .venv
+activate .venv/bin/activate
+python3 -m pip --upgrade pip
+python3 -m pip install -e '.[test,notebook]'
 ```
-in the console.
+Then create and install a new kernel
+```
+python3 -m ipykernel install --user --name auxin_signalling_models
+```
+
+Then run
+
+```
+jupyter-notebook notebooks
+```
+
+Open a notebook and select the `auxin_signalling_models` kernel in the drop-down menu: Kernel -> Change Kernel.
+
+You can then run the notebook by selecting Cell -> Run All in the drop-down menu.
