@@ -108,7 +108,8 @@ class AuxinSignallingPathway:
                                  for s2 in arf_variable_labels + iaa_variable_labels if s2 >= s1]
         self.dimer_variable_labels = dimer_variable_labels
 
-        dimer_variables = []
+        self.dimer_variables = []
+
         for dimer in dimer_variable_labels:
             components = dimer.split("__")[1:]
             _dimer_var = self.add_state(dimer, category='dimer',
@@ -116,9 +117,7 @@ class AuxinSignallingPathway:
                                         description=f"Dimer of {components[0]} protein "
                                         f"and {components[1]} protein",
                                         initial_condition=0.1)
-            dimer_variables.append(_dimer_var)
-
-        self.dimer_variables = dimer_variables
+            self.dimer_variables.append(_dimer_var)
 
         rna_var_labels = [f"R__{iaa}" for iaa in iaa_variable_labels]
 
@@ -142,7 +141,7 @@ class AuxinSignallingPathway:
         )
 
         self.all_state_variables = self.arf_variables + self.iaa_variables \
-            + self.promoter_variables + dimer_variables \
+            + self.promoter_variables + self.dimer_variables \
             + rna_variables
 
         arf_decay = sp.sympify('d__arf__all')
@@ -162,7 +161,6 @@ class AuxinSignallingPathway:
                 self.add_reaction([], [arf.name], fwd_rates=[arf_production],
                                   bwd_rates=[])
 
-        # iaa_production = sp.sympify('k__iaa__all')
         iaa_decay = sp.sympify('d__iaa__all')
 
         self.add_model_parameter(iaa_decay, 1.0,
@@ -171,7 +169,7 @@ class AuxinSignallingPathway:
         for _, iaa in enumerate(self.iaa_variables):
             self.add_reaction([], [iaa.name], bwd_rates=[iaa_decay])
 
-        for d in dimer_variables:
+        for d in self.dimer_variables:
             association_rate = sp.sympify(f"k__{d.name}")
             dissociation_rate = sp.sympify(f"d__{d.name}")
 
@@ -254,7 +252,7 @@ class AuxinSignallingPathway:
 
             bound_complex = list(promoter.components)[0]
 
-            if bound_complex == "dimer":
+            if bound_complex in [str(d) for d in self.dimer_variables]:
 
                 reactants = reactants[0].components
 
@@ -759,6 +757,7 @@ class AuxinSignallingPathway:
 
             jac_func = self.generate_jacobian_func(
                 parameter_subs_dict=parameter_subs_dict)
+
             sol = solve_ivp(
                 deriv_func, ts[[0, -1]],
                 ic.copy(),
@@ -799,7 +798,8 @@ class AuxinSignallingPathway:
         t_sym = sp.sympify("_t")
 
         _jac_func = sp.lambdify((state_variables, t_sym, param_names,
-                                 free_variables), jacobian)
+                                 free_variables), jacobian,
+                                modules=["numpy"])
 
         def jac_func(y, t, p, x):
             ret = _jac_func(y, t, p, x)
@@ -828,7 +828,8 @@ class AuxinSignallingPathway:
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
         rhs_func = sp.lambdify((state_variables, t_sym, param_names,
-                                free_variables), odes)
+                                free_variables), odes,
+                               modules=["numpy"])
 
         return rhs_func
 
