@@ -8,7 +8,7 @@ jobs:
     - name: checkout
       uses: actions/checkout@v1
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: '3.11'
 
@@ -21,7 +21,7 @@ jobs:
         mkdir -p docs/_templates
         python -m sphinx -b html docs docs/_build/html
     - name: Upload docs
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: DocumentationHTML
         path: docs/_build/html/
