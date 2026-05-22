@@ -2,7 +2,6 @@ import logging
 from copy import copy
 from typing import Callable, List
 
-import myokit
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -11,6 +10,11 @@ import sympy as sp
 from pyvis.network import Network
 from scipy.integrate import solve_ivp
 from sympy.printing.julia import julia_code
+
+try:
+    import myokit
+except ImportError:
+    myokit = None
 
 from .Parameter import Parameter
 from .Reaction import Reaction
@@ -1114,7 +1118,10 @@ class AuxinSignallingPathway:
             :eliminate_promoter_state: The state to be eliminated from
             the promoter component of the model (str)
         :raises: NotImplementedError
+        :raises: ImportError if myokit not installed
         """
+        if not myokit:
+            raise ImportError("Install extra: pip install mypackage[myokit]")
 
         if not name:
             name = self.__class__.__name__
@@ -1157,7 +1164,7 @@ class AuxinSignallingPathway:
                               for p in self.promoter_variables]
         if eliminate_promoter_state:
             mk_expr = 1 - sum(sp.Matrix([s for s in promoter_variables if str(s)
-                                         != eliminate_promoter_state]))
+                                        != eliminate_promoter_state]))
             mk_expr = str(mk_expr)
             comp[eliminate_promoter_state].set_rhs(mk_expr)
 

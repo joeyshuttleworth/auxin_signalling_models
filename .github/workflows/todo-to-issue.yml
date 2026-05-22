@@ -1,6 +1,0 @@
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.12']
-- name: TODO to Issue
-  uses: alstr/todo-to-issue-action@latest
