@@ -1118,6 +1118,7 @@ class AuxinSignallingPathway:
             :eliminate_promoter_state: The state to be eliminated from
             the promoter component of the model (str)
         :raises: NotImplementedError
+        :raises: ImportError if myokit not installed
         """
         if not myokit:
             raise ImportError("Install extra: pip install mypackage[myokit]")
