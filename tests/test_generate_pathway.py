@@ -5,11 +5,15 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import matplotlib.pyplot as plt
-import myokit
 import networkx as nx
 import numpy as np
 import pytest
 import sympy as sp
+
+try:
+    import myokit
+except ImportError:
+    myokit = None
 
 from auxin_signalling_models.AuxinSignallingPathway import \
     AuxinSignallingPathway as asp_class
