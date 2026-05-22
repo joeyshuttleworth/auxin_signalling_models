@@ -15,10 +15,13 @@ class Parameter(Variable):
     def __hash__(self):
         return hash(self.__key())
 
+    def __repr__(self):
+        return self.__str__()
+
     def __str__(self):
         dict = {
             "name": self.name,
             "description": self.description,
             "default_value": self.default_value
         }
-        return str(dict)
+        return str(list(dict.values()))
