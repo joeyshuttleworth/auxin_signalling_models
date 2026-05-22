@@ -1109,7 +1109,7 @@ class AuxinSignallingPathway:
         self.remove_state(state, *args, strict=strict, **kwargs)
 
     def generate_myokit_model(self, name: str = "",
-                                eliminate_promoter_state: str = ""):
+                              eliminate_promoter_state: str = ""):
         """Generate myokit code for the model.
 
         This method is unimplemented
@@ -1160,7 +1160,7 @@ class AuxinSignallingPathway:
             comp.add_variable(state)
 
         promoter_variables = [sp.sympify(p.name)
-                            for p in self.promoter_variables]
+                              for p in self.promoter_variables]
         if eliminate_promoter_state:
             mk_expr = 1 - sum(sp.Matrix([s for s in promoter_variables if str(s)
                                         != eliminate_promoter_state]))
