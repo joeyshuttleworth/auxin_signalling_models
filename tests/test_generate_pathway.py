@@ -126,6 +126,7 @@ class TestGeneratePathway:
                 fout.write(latex_out)
 
     def test_myokit_output(self):
+        pytest.importorskip("myokit")
         for i, kwargs in enumerate(kwargs_list):
             asp_model = asp_class(**kwargs)
 

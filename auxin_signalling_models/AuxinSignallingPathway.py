@@ -2,7 +2,6 @@ import logging
 from copy import copy
 from typing import Callable, List
 
-import myokit
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -1104,73 +1103,79 @@ class AuxinSignallingPathway:
 
         self.remove_state(state, *args, strict=strict, **kwargs)
 
-    def generate_myokit_model(self, name: str = "",
-                              eliminate_promoter_state: str = ""):
-        """Generate myokit code for the model.
+    try:
+        import myokit
+    except ImportError:
+        myokit = None
 
-        This method is unimplemented
+    if myokit:
+        def generate_myokit_model(self, name: str = "",
+                                  eliminate_promoter_state: str = ""):
+            """Generate myokit code for the model.
 
-        :param name: A label for the created myokit model
-            :eliminate_promoter_state: The state to be eliminated from
-            the promoter component of the model (str)
-        :raises: NotImplementedError
-        """
+            This method is unimplemented
 
-        if not name:
-            name = self.__class__.__name__
+            :param name: A label for the created myokit model
+                :eliminate_promoter_state: The state to be eliminated from
+                the promoter component of the model (str)
+            :raises: NotImplementedError
+            """
 
-        odes, free_variables, _, _ = self.generate_ode_system()
+            if not name:
+                name = self.__class__.__name__
 
-        state_variables = self.get_state_variable_names()
-        param_dict = self.get_default_parameters()
+            odes, free_variables, _, _ = self.generate_ode_system()
 
-        model = myokit.Model(name)
+            state_variables = self.get_state_variable_names()
+            param_dict = self.get_default_parameters()
 
-        #  Nuclear Auxin Pathway
-        comp_name = 'NAP'
-        model.add_component(comp_name)
-        comp = model[comp_name]
+            model = myokit.Model(name)
 
-        if eliminate_promoter_state == '':
-            eliminate_promoter_state = sorted(
-                [p.name for p in self.promoter_variables])[0]
+            #  Nuclear Auxin Pathway
+            comp_name = 'NAP'
+            model.add_component(comp_name)
+            comp = model[comp_name]
 
-        # Set up time variable
-        model.add_component('engine')
-        model['engine'].add_variable('time')
-        model['engine']['time'].set_binding('time')
-        model['engine']['time'].set_rhs(0.0)
+            if eliminate_promoter_state == '':
+                eliminate_promoter_state = sorted(
+                    [p.name for p in self.promoter_variables])[0]
 
-        #  Setup auxin symbol
-        comp.add_variable(self.auxin_variable_label)
-        comp[self.auxin_variable_label].set_rhs(0.0)
-        comp[self.auxin_variable_label].set_binding('pace')
+            # Set up time variable
+            model.add_component('engine')
+            model['engine'].add_variable('time')
+            model['engine']['time'].set_binding('time')
+            model['engine']['time'].set_rhs(0.0)
 
-        for parameter, ic in param_dict.items():
-            comp.add_variable(parameter)
-            comp[parameter].set_rhs(ic)
+            #  Setup auxin symbol
+            comp.add_variable(self.auxin_variable_label)
+            comp[self.auxin_variable_label].set_rhs(0.0)
+            comp[self.auxin_variable_label].set_binding('pace')
 
-        for state in state_variables:
-            comp.add_variable(state)
+            for parameter, ic in param_dict.items():
+                comp.add_variable(parameter)
+                comp[parameter].set_rhs(ic)
 
-        promoter_variables = [sp.sympify(p.name)
-                              for p in self.promoter_variables]
-        if eliminate_promoter_state:
-            mk_expr = 1 - sum(sp.Matrix([s for s in promoter_variables if str(s)
-                                         != eliminate_promoter_state]))
-            mk_expr = str(mk_expr)
-            comp[eliminate_promoter_state].set_rhs(mk_expr)
+            for state in state_variables:
+                comp.add_variable(state)
 
-        default_initial_conditions = self.get_default_initial_conditions()
-        for state, ode in zip(state_variables, odes):
-            if state == eliminate_promoter_state:
-                continue
-            ic = default_initial_conditions[state]
-            comp[state].promote(ic)
-            mk_expr = str(ode).replace('**', '^')
-            comp[state].set_rhs(mk_expr)
+            promoter_variables = [sp.sympify(p.name)
+                                for p in self.promoter_variables]
+            if eliminate_promoter_state:
+                mk_expr = 1 - sum(sp.Matrix([s for s in promoter_variables if str(s)
+                                            != eliminate_promoter_state]))
+                mk_expr = str(mk_expr)
+                comp[eliminate_promoter_state].set_rhs(mk_expr)
 
-        return model
+            default_initial_conditions = self.get_default_initial_conditions()
+            for state, ode in zip(state_variables, odes):
+                if state == eliminate_promoter_state:
+                    continue
+                ic = default_initial_conditions[state]
+                comp[state].promote(ic)
+                mk_expr = str(ode).replace('**', '^')
+                comp[state].set_rhs(mk_expr)
+
+            return model
 
     def get_variable_info(self):
         rows = []
