@@ -436,6 +436,8 @@ class AuxinSignallingPathway:
             added to the model
         :param strict: Boolean flag, if true, an exception is thrown if
             any of the state variables are missing from the model
+
+        :raises: ValueError if reactants/products are empty or if a state variable appears in multiple fields
         """
 
         reactants = tuple(reactants)
@@ -467,10 +469,14 @@ class AuxinSignallingPathway:
             products = []
 
         if len(reactants) + len(products) == 0:
-            raise Exception("")
+            raise ValueError("Tried to add empty reaction")
 
         if len(products) == 0:
-            raise Exception("")
+            raise ValueError("Tried to add reaction with no products")
+
+        for v in reactants:
+            if v in products or v in enzymes:
+                raise ValueError("Malformed reaction")
 
         if add_states:
             for state in set(reactants + products + enzymes):
@@ -481,15 +487,15 @@ class AuxinSignallingPathway:
                 states = self.get_state_variable_names()\
                     + [self.empty_set_node.name, self.auxin_variable_label]
                 if state not in states:
-                    raise Exception(f"Tried to add reaction with state {state} "
-                                    f"but {state} does not exist in the model "
-                                    f"(strict=True). States are {states}")
+                    raise ValueError(f"Tried to add reaction with state {state} "
+                                     f"but {state} does not exist in the model "
+                                     f"(strict=True). States are {states}")
 
         for rate in bwd_rates + fwd_rates:
             if rate not in self.get_parameter_names():
                 if strict:
-                    raise Exception(f"rate {rate} not found in model. "
-                                    f"model has:\n{self._parameters}")
+                    raise ValueError(f"rate {rate} not found in model. "
+                                     f"model has:\n{self._parameters}")
                 else:
                     self.add_model_parameter(rate)
 
@@ -553,8 +559,11 @@ class AuxinSignallingPathway:
         :param reaction: a Reaction describing the reaction of interest
         :param variable: the state variable for which terms are being
             generated
+
         :returns: a list of sympy expressions resulting from the
             reaction
+
+        :raises: ValueError if Reaction is malformed or if the variable is not found in the reaction
         """
         terms = [sp.sympify('0')]
 
@@ -562,10 +571,10 @@ class AuxinSignallingPathway:
             return [0]
 
         if variable not in reaction.reactants + reaction.products:
-            raise Exception("")
+            raise ValueError(f"Requested variable {variable} not found in {reaction}")
 
         if variable in reaction.reactants and variable in reaction.products:
-            raise Exception("")
+            raise ValueError(f"Malformed reaction {reaction} with {variable} on both sides")
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products:
