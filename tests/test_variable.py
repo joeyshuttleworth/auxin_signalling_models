@@ -1,5 +1,3 @@
-import pytest
-
 from auxin_signalling_models.Variable import Variable
 
 
