@@ -1,5 +1,6 @@
-from auxin_signalling_models.Variable import Variable
 import pytest
+
+from auxin_signalling_models.Variable import Variable
 
 
 class TestVariable:
