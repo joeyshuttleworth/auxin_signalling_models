@@ -8,15 +8,10 @@ class StateVariable(Variable):
     def __init__(self, *args,
                  initial_condition: float = 1.0,
                  components: Iterable = [],
-                 category: str = "None",
                  **kwargs):
 
         super().__init__(*args, **kwargs)
-
         self.components = tuple(components)
-
-        self.category = category
-
         self.initial_condition = initial_condition
 
     def __key(self):
@@ -28,7 +23,11 @@ class StateVariable(Variable):
     def __str__(self):
         dict = {"name": self.name,
                 "description": self.description,
-                "components": self.components}
+                "components": self.components,
+                "category": self.category,
+                "initial_condition": self.initial_condition
+                }
+
         return str(dict)
 
     def __repr__(self):
