@@ -65,11 +65,18 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                 subs_dict[f"k__{rna_symbol}__{arf_symbol}"] = "k__RNA__ARF"
 
         self.add_model_parameter(
-            "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
+            "k__RNA__IAA",
+            1.0,
+            "Rate of IAA production from RNA",
+            "production")
 
         if self.include_arf_transcription:
             self.add_model_parameter(
-                "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
+                "k__RNA__ARF",
+                1.0,
+                "Rate of ARF production from RNA",
+                "production"
+            )
 
         for key in list(self.get_parameter_names()):
             if "bind" in key:
