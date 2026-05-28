@@ -406,6 +406,34 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return jac
 
+    def get_default_parameters(self, parameter_subs_dict: dict = None,
+                               omit_unused: bool = False):
+        """Return a default parameter set.
+
+        :param parameter_subs_dict: Dictionary of parameter substitutions to apply
+        :param omit_unused: If True, remove parameters that don't appear in model equations
+        :return: a dictionary of parameter values
+        """
+
+        dict = super().get_default_parameters(parameter_subs_dict=parameter_subs_dict,
+                                              omit_unused=False)
+
+        if omit_unused:
+            odes, free_variables, _, constraints\
+                = self.generate_ode_system(reduced=True,
+                                           parameter_subs_dict=parameter_subs_dict)
+
+            promoter_odes = constraints[0]
+
+            dict = {
+                p: v for p, v in dict.items()
+                if p in [str(s) for s in odes.free_symbols]
+                or p in [str(s) for s in promoter_odes.free_symbols]
+                or p in [str(s) for s in free_variables]
+            }
+
+        return dict
+
     def output_julia(self, aux_func_name: str = "", aux_func_params: List = [],
                      parameter_subs_dict: dict = None):
         """Generate julia code describing the model including the quasi steady-
@@ -426,7 +454,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         state_vars = self.get_state_variable_names(include_promoter_vars=False)
         default_parameters = self.get_default_parameters(
-            parameter_subs_dict=parameter_subs_dict)
+            parameter_subs_dict=parameter_subs_dict,
+            omit_unused=True
+        )
 
         promoter_vars = [s.name for s in super().get_state_variables()
                          if s.category == "promoter"]
