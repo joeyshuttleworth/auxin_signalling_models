@@ -146,7 +146,7 @@ class AuxinSignallingPathway:
 
         arf_decay = sp.sympify('d__arf__all')
         self.add_model_parameter(arf_decay, 1.0,
-                                 "decay rate of ARF proteins"
+                                 "decay rate of ARF proteins",
                                  "decay"
                                  )
 
