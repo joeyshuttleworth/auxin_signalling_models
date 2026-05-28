@@ -1,7 +1,6 @@
+import functools
 import random
 import string
-
-import functools
 
 import sympy as sp
 
