@@ -218,13 +218,13 @@ class AuxinSignallingPathway:
 
             self.add_model_parameter(promoter_binding_rate,
                                      1.0,
-                                     f"binding rate for promoter {promoter.name}",
+                                     f"Association rate for promoter {promoter.name}",
                                      "promoter binding",
                                      )
 
             self.add_model_parameter(promoter_unbinding_rate,
                                      1.0,
-                                     "dissociation rate for promoter "
+                                     "Dissociation rate for promoter "
                                      f"{promoter.name}",
                                      "promoter binding",
                                      )
@@ -243,9 +243,9 @@ class AuxinSignallingPathway:
 
         for promoter in self.promoter_variables:
             for rna in rna_variables:
-                rate = f"k__{promoter.name}__{rna.name}"
+                transcription_rate = f"k__{promoter.name}__{rna.name}"
 
-                self.add_model_parameter(rate,
+                self.add_model_parameter(transcription_rate,
                                          1.0,
                                          f"Rate of transcription "
                                          f"for {rna.name} for promoter "
@@ -254,7 +254,7 @@ class AuxinSignallingPathway:
                                          )
 
                 self.add_reaction(
-                    [], [rna.name], [rate],
+                    [], [rna.name], [transcription_rate],
                     [], [promoter.name], reaction_type="linear"
                 )
 
@@ -345,17 +345,17 @@ class AuxinSignallingPathway:
                 rna.name], [], [rna_decay_rate])
             prot = rna.name.split('__')[1]
 
-            production_rate = f"k__{rna.name}__{prot}"
+            translation_rate = f"k__{rna.name}__{prot}"
             rate_default_val = 1.0
 
-            self.add_model_parameter(production_rate, rate_default_val,
+            self.add_model_parameter(translation_rate, rate_default_val,
                                      f"Rate of production of {prot} from"
                                      f"RNA {rna.name}",
                                      "mRNA production"
                                      )
 
             self.add_reaction([], [prot],
-                              fwd_rates=[production_rate],
+                              fwd_rates=[translation_rate],
                               enzymes=[rna.name])
 
         self.rhs_func = None
@@ -1344,19 +1344,19 @@ class AuxinSignallingPathway:
         :returns: Dictionary of state variables and corresponding LaTeX
         """
         states = self.get_state_variables()
-        ret_dict = {p.name: self.pretty_print_parameter(p.name)
-                    for p in sorted(list(states))}
 
-        states_dict = {p.name: p for p in sorted(list(states))}
+        p_states_dict = {s.name: self.pretty_print_state(s.name) for s in states}
+
         if group_by_category:
+            states_dict = {p.name: p for p in sorted(list(states))}
             return dict(
                 sorted(
-                    ret_dict.items(),
+                    p_states_dict.items(),
                     key=lambda kv: hash(states_dict[kv[0]].category)
                 )
             )
 
-        return _sorted_dict(ret_dict)
+        return _sorted_dict(p_states_dict)
 
     def generate_pretty_print_parameter_dict(self, group_by_category=True):
         """Print all model parameters in a LaTeX-maths format.
@@ -1416,6 +1416,23 @@ class AuxinSignallingPathway:
         rest = parts[2:]
 
         return f"{head}_{{{top}_{{{', '.join(rest)}}}}}"
+
+    @classmethod
+    def pretty_print_state(cls, state: str):
+        """Print a state in a LaTeX math format.
+
+        :param state: The parameter label to convert
+        :returns: A LaTeX-maths string
+        """
+        parts = state.split("__")
+
+        if len(parts) < 2:
+            return state
+
+        head = parts[0]
+        rest = parts[1:]
+
+        return f"{head}_{{{', '.join(rest)}}}"
 
 
 def _sorted_dict(_dict: dict):
