@@ -907,10 +907,6 @@ class AuxinSignallingPathway:
         :return: a dictionary of parameter values
         """
 
-        if ignore_unused:
-            _, _, parameters, _ = self.generate_ode_system(parameter_subs_dict)
-            return parameters
-
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict.copy()
 
@@ -918,6 +914,16 @@ class AuxinSignallingPathway:
                       and len(sp.sympify(parameter_subs_dict[k.name]).free_symbols) == 1
                       else k.name: k.default_value
                       for k in self._parameters}
+
+        if ignore_unused:
+            odes, free_variables, _, _ = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
+
+            param_dict = {
+                p: v for (p, v) in param_dict.items()
+                if p in [str(v) for v in odes.free_symbols]
+                or p in free_variables
+            }
+            pass
 
         # sort parameters
         param_dict = _sorted_dict(param_dict)
@@ -1330,7 +1336,29 @@ class AuxinSignallingPathway:
 
         return _sorted_dict(self.parameter_subs_dict)
 
-    def pretty_print_parameter_dict(self, group_by_category=True):
+    def generate_pretty_print_state_dict(self, group_by_category=True):
+        """Print all state variables in a LaTeX-maths format.
+
+        :param group_by_category: If true, group state variables according to their category field. Else, sort alphabetically
+
+        :returns: Dictionary of state variables and corresponding LaTeX
+        """
+        states = self.get_state_variables()
+        ret_dict = {p.name: self.pretty_print_parameter(p.name)
+                    for p in sorted(list(states))}
+
+        states_dict = {p.name: p for p in sorted(list(states))}
+        if group_by_category:
+            return dict(
+                sorted(
+                    ret_dict.items(),
+                    key=lambda kv: hash(states_dict[kv[0]].category)
+                )
+            )
+
+        return _sorted_dict(ret_dict)
+
+    def generate_pretty_print_parameter_dict(self, group_by_category=True):
         """Print all model parameters in a LaTeX-maths format.
 
         :param group_by_category: If true, group model parameters according to their category field. Else, sort alphabetically
@@ -1342,11 +1370,13 @@ class AuxinSignallingPathway:
         ret_dict = {p.name: self.pretty_print_parameter(p.name)
                     for p in sorted(list(pars))}
 
+        pars_dict = {p.name: p for p in sorted(list(pars))}
+
         if group_by_category:
             return dict(
                 sorted(
                     ret_dict.items(),
-                    key=lambda kv: hash(kv[1])
+                    key=lambda kv: hash(pars_dict[kv[0]].category)
                 )
             )
 
