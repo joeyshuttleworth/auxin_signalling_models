@@ -1,7 +1,7 @@
 function ReducedAuxinSignallingPathway_f_deriv!(dz, z, p, t=0.0)
 	(ARF_1, D__ARF_1__ARF_1, D__ARF_1__iaa_1, D__ARF_1__iaa_2, D__iaa_1__iaa_1, D__iaa_1__iaa_2, D__iaa_2__iaa_2, R__iaa_1, R__iaa_2, iaa_1, iaa_2) = z
 
-	(d__D__ARF_1__ARF_1, d__D__ARF_1__iaa_1, d__D__ARF_1__iaa_2, d__D__iaa_1__iaa_1, d__D__iaa_1__iaa_2, d__D__iaa_2__iaa_2, d__G__ARF_1__ARF_1, d__G__ARF_1__iaa_1, d__G__ARF_1__iaa_2, d__R, d__arf__all, d__iaa_1__x, d__iaa_2__x, d__iaa__all, k__D__ARF_1__ARF_1, k__D__ARF_1__iaa_1, k__D__ARF_1__iaa_2, k__D__iaa_1__iaa_1, k__D__iaa_1__iaa_2, k__D__iaa_2__iaa_2, k__G__ARF_1__ARF_1, k__G__ARF_1__ARF_1__R__iaa_1, k__G__ARF_1__ARF_1__R__iaa_2, k__G__ARF_1__R__iaa_1, k__G__ARF_1__R__iaa_2, k__G__ARF_1__iaa_1, k__G__ARF_1__iaa_1__R__iaa_1, k__G__ARF_1__iaa_1__R__iaa_2, k__G__ARF_1__iaa_2, k__G__ARF_1__iaa_2__R__iaa_1, k__G__ARF_1__iaa_2__R__iaa_2, k__G__R__iaa_1, k__G__R__iaa_2, k__RNA__IAA, k__arf__all, x) = p
+	(d__D__ARF_1__ARF_1, d__D__ARF_1__iaa_1, d__D__ARF_1__iaa_2, d__D__iaa_1__iaa_1, d__D__iaa_1__iaa_2, d__D__iaa_2__iaa_2, d__G__ARF_1__ARF_1, d__G__ARF_1__iaa_1, d__G__ARF_1__iaa_2, d__R, d__arf__all, d__iaa_1__x, d__iaa_2__x, d__iaa__all, k__D__ARF_1__ARF_1, k__D__ARF_1__iaa_1, k__D__ARF_1__iaa_2, k__D__iaa_1__iaa_1, k__D__iaa_1__iaa_2, k__D__iaa_2__iaa_2, k__G__ARF_1__ARF_1, k__G__ARF_1__ARF_1__R__iaa_1, k__G__ARF_1__ARF_1__R__iaa_2, k__G__ARF_1__iaa_1, k__G__ARF_1__iaa_1__R__iaa_1, k__G__ARF_1__iaa_1__R__iaa_2, k__G__ARF_1__iaa_2, k__G__ARF_1__iaa_2__R__iaa_1, k__G__ARF_1__iaa_2__R__iaa_2, k__G__R__iaa_1, k__G__R__iaa_2, k__RNA__IAA, k__arf__all, x) = p
 
 	x0 = D__ARF_1__ARF_1 .* k__G__ARF_1__ARF_1
 	x1 = 1 ./ (-d__G__ARF_1__ARF_1 - x0)
