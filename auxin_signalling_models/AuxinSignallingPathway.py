@@ -613,10 +613,12 @@ class AuxinSignallingPathway:
             return [0]
 
         if variable not in reaction.reactants + reaction.products:
-            raise ValueError(f"Requested variable {variable} not found in {reaction}")
+            raise ValueError(
+                f"Requested variable {variable} not found in {reaction}")
 
         if variable in reaction.reactants and variable in reaction.products:
-            raise ValueError(f"Malformed reaction {reaction} with {variable} on both sides")
+            raise ValueError(
+                f"Malformed reaction {reaction} with {variable} on both sides")
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products:
@@ -916,7 +918,8 @@ class AuxinSignallingPathway:
                       for k in self._parameters}
 
         if omit_unused:
-            odes, free_variables, _, _ = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict)
+            odes, free_variables, _, _ = self.generate_ode_system(
+                parameter_subs_dict=parameter_subs_dict)
 
             param_dict = {
                 p: v for (p, v) in param_dict.items()
@@ -1345,7 +1348,8 @@ class AuxinSignallingPathway:
         """
         states = self.get_state_variables()
 
-        p_states_dict = {s.name: self.pretty_print_state(s.name) for s in states}
+        p_states_dict = {s.name: self.pretty_print_state(
+            s.name) for s in states}
 
         if group_by_category:
             states_dict = {p.name: p for p in sorted(list(states))}
