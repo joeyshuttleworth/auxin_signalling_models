@@ -158,7 +158,7 @@ class TestGeneratePathway:
         for i, kwargs in enumerate(kwargs_list):
             asp_model = asp_class(**kwargs)
 
-            pretty_str = asp_model.pretty_print_parameter_dict()
+            pretty_str = asp_model.generate_pretty_print_parameter_dict()
             assert isinstance(pretty_str, dict)
 
             with open(os.path.join(output_dir, f"full_model_{i}_params.txt"), 'w') as fout:
