@@ -30,7 +30,7 @@ jobs:
     - name: Test with pytest
       run: |
         python -m pip install -e .[test,notebook,myokit]
-        python3 -m ipykernel install --user --name auxin_signalling_models
+        python -m ipykernel install --user --name auxin_signalling_models
         python -m pytest --cov --cov-config=.coveragerc -v --capture=no
         python -m pytest --nbmake notebooks
     - uses: codecov/codecov-action@v1
