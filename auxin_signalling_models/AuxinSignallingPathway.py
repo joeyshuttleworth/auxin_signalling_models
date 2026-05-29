@@ -108,7 +108,8 @@ class AuxinSignallingPathway:
                                  for s2 in arf_variable_labels + iaa_variable_labels if s2 >= s1]
         self.dimer_variable_labels = dimer_variable_labels
 
-        dimer_variables = []
+        self.dimer_variables = []
+
         for dimer in dimer_variable_labels:
             components = dimer.split("__")[1:]
             _dimer_var = self.add_state(dimer, category='dimer',
@@ -116,9 +117,7 @@ class AuxinSignallingPathway:
                                         description=f"Dimer of {components[0]} protein "
                                         f"and {components[1]} protein",
                                         initial_condition=0.1)
-            dimer_variables.append(_dimer_var)
-
-        self.dimer_variables = dimer_variables
+            self.dimer_variables.append(_dimer_var)
 
         rna_var_labels = [f"R__{iaa}" for iaa in iaa_variable_labels]
 
@@ -142,7 +141,7 @@ class AuxinSignallingPathway:
         )
 
         self.all_state_variables = self.arf_variables + self.iaa_variables \
-            + self.promoter_variables + dimer_variables \
+            + self.promoter_variables + self.dimer_variables \
             + rna_variables
 
         arf_decay = sp.sympify('d__arf__all')
@@ -162,7 +161,6 @@ class AuxinSignallingPathway:
                 self.add_reaction([], [arf.name], fwd_rates=[arf_production],
                                   bwd_rates=[])
 
-        # iaa_production = sp.sympify('k__iaa__all')
         iaa_decay = sp.sympify('d__iaa__all')
 
         self.add_model_parameter(iaa_decay, 1.0,
@@ -171,7 +169,7 @@ class AuxinSignallingPathway:
         for _, iaa in enumerate(self.iaa_variables):
             self.add_reaction([], [iaa.name], bwd_rates=[iaa_decay])
 
-        for d in dimer_variables:
+        for d in self.dimer_variables:
             association_rate = sp.sympify(f"k__{d.name}")
             dissociation_rate = sp.sympify(f"d__{d.name}")
 
@@ -254,7 +252,7 @@ class AuxinSignallingPathway:
 
             bound_complex = list(promoter.components)[0]
 
-            if bound_complex == "dimer":
+            if bound_complex in [str(d) for d in self.dimer_variables]:
 
                 reactants = reactants[0].components
 
@@ -438,6 +436,8 @@ class AuxinSignallingPathway:
             added to the model
         :param strict: Boolean flag, if true, an exception is thrown if
             any of the state variables are missing from the model
+
+        :raises: ValueError if reactants/products are empty or if a state variable appears in multiple fields
         """
 
         reactants = tuple(reactants)
@@ -469,10 +469,14 @@ class AuxinSignallingPathway:
             products = []
 
         if len(reactants) + len(products) == 0:
-            raise Exception("")
+            raise ValueError("Tried to add empty reaction")
 
         if len(products) == 0:
-            raise Exception("")
+            raise ValueError("Tried to add reaction with no products")
+
+        for v in reactants:
+            if v in products or v in enzymes:
+                raise ValueError("Malformed reaction")
 
         if add_states:
             for state in set(reactants + products + enzymes):
@@ -483,15 +487,15 @@ class AuxinSignallingPathway:
                 states = self.get_state_variable_names()\
                     + [self.empty_set_node.name, self.auxin_variable_label]
                 if state not in states:
-                    raise Exception(f"Tried to add reaction with state {state} "
-                                    f"but {state} does not exist in the model "
-                                    f"(strict=True). States are {states}")
+                    raise ValueError(f"Tried to add reaction with state {state} "
+                                     f"but {state} does not exist in the model "
+                                     f"(strict=True). States are {states}")
 
         for rate in bwd_rates + fwd_rates:
             if rate not in self.get_parameter_names():
                 if strict:
-                    raise Exception(f"rate {rate} not found in model. "
-                                    f"model has:\n{self._parameters}")
+                    raise ValueError(f"rate {rate} not found in model. "
+                                     f"model has:\n{self._parameters}")
                 else:
                     self.add_model_parameter(rate)
 
@@ -555,8 +559,11 @@ class AuxinSignallingPathway:
         :param reaction: a Reaction describing the reaction of interest
         :param variable: the state variable for which terms are being
             generated
+
         :returns: a list of sympy expressions resulting from the
             reaction
+
+        :raises: ValueError if Reaction is malformed or if the variable is not found in the reaction
         """
         terms = [sp.sympify('0')]
 
@@ -564,10 +571,10 @@ class AuxinSignallingPathway:
             return [0]
 
         if variable not in reaction.reactants + reaction.products:
-            raise Exception("")
+            raise ValueError(f"Requested variable {variable} not found in {reaction}")
 
         if variable in reaction.reactants and variable in reaction.products:
-            raise Exception("")
+            raise ValueError(f"Malformed reaction {reaction} with {variable} on both sides")
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products:
@@ -759,6 +766,7 @@ class AuxinSignallingPathway:
 
             jac_func = self.generate_jacobian_func(
                 parameter_subs_dict=parameter_subs_dict)
+
             sol = solve_ivp(
                 deriv_func, ts[[0, -1]],
                 ic.copy(),
@@ -799,7 +807,8 @@ class AuxinSignallingPathway:
         t_sym = sp.sympify("_t")
 
         _jac_func = sp.lambdify((state_variables, t_sym, param_names,
-                                 free_variables), jacobian)
+                                 free_variables), jacobian,
+                                modules=["numpy"])
 
         def jac_func(y, t, p, x):
             ret = _jac_func(y, t, p, x)
@@ -828,7 +837,8 @@ class AuxinSignallingPathway:
 
         free_variables = sp.Matrix([sp.sympify(x) for x in free_variables])
         rhs_func = sp.lambdify((state_variables, t_sym, param_names,
-                                free_variables), odes)
+                                free_variables), odes,
+                               modules=["numpy"])
 
         return rhs_func
 

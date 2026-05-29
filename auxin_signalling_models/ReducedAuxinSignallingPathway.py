@@ -318,7 +318,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             G = 1.0 - np.sum(promoter_vals)
             promoter_vals = np.concatenate((np.array([G]), promoter_vals))
 
-            return _rhs_func(y, t, p, aux, promoter_vals).flatten()
+            return np.array(_rhs_func(y, t, p, aux, promoter_vals),
+                            dtype=np.float64).flatten()
 
         return rhs_func
 
@@ -386,7 +387,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         promoter_ss_expr = self.get_promoter_steady_state_expr(
             parameter_subs_dict)
 
-        sub_dict = {g: '0' for g in [s.name for s in self.promoter_variables]}
+        sub_dict = {g: '0' for g in [s.name for s in
+                                     self.promoter_variables]}
         promoter_ss_expr = promoter_ss_expr.subs(sub_dict)
         promoter_ss_jac = self.simplify_expr(
             promoter_ss_expr.jacobian(state_vars)
@@ -475,7 +477,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         t_sym = sp.sympify("_t")
         inputs = (state_names, t_sym, param_names, free_variables)
 
-        jac_func = sp.lambdify(inputs, jac_expr)
+        jac_func = sp.lambdify(inputs, jac_expr, modules=["numpy"])
 
         return jac_func
 
