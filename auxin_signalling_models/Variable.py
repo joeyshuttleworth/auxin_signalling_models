@@ -27,7 +27,7 @@ class Variable:
             print(name)
 
     def __key(self):
-        return (self.name, self.components)
+        return (self.name, self.sympy_symbol)
 
     def __hash__(self):
         return hash(self.__key())
