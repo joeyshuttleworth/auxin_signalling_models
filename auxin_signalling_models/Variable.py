@@ -19,7 +19,6 @@ class Variable:
 
         self.name = name
 
-        self.components = components
         self.sympy_symbol = sp.sympify(name)
         self.description = description
         self.category = category
