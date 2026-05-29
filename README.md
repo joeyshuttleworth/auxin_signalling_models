@@ -54,7 +54,13 @@ python3 -m pytest
 ```
 
 #### Optional myokit model generation
-To enable myokit model generation, the package must be installed with the 
+To enable myokit model generation, the package must be installed with the `myokit` optional dependencies like so,
+
+```
+pip install '.[myokit]'
+```
+
+You may need to follow the instructions to install myokit [myokit.org/instll](myokit.org/install).
 
 #### Jupyter notebooks
 Various example Jupyter notebooks are provided in `notebooks`.
