@@ -69,7 +69,7 @@ python3 -m pip install -e '.[test,notebook]'
 ```
 Then create and install a new kernel
 ```
-python3 -m ipykernel install --user --name auxin_signalling_models
+python3 -m ipykernel install --user --name auxin_signalling_models_kernel
 ```
 
 Then run
