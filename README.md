@@ -60,7 +60,7 @@ To enable myokit model generation, the package must be installed with the `myoki
 pip install '.[myokit]'
 ```
 
-You may need to follow the instructions to install myokit [myokit.org/instll](myokit.org/install).
+You may need to follow the instructions to install myokit [myokit.org/install](myokit.org/install).
 
 #### Jupyter notebooks
 Various example Jupyter notebooks are provided in `notebooks`.
