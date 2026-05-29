@@ -206,12 +206,11 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
         promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
 
-        parameter_vars = sorted(list(self.get_default_parameters().keys()))
+        parameter_vars = sorted(list(self.get_default_parameters(parameter_subs_dict=parameter_subs_dict).keys()))
         state_vars = sorted(self.get_state_variable_names(
             include_promoter_vars=False))
 
         promoter_inputs = (state_vars, parameter_vars, free_variables)
-
         promoter_expr_jac_func = sp.lambdify(promoter_inputs,
                                              promoter_expr_jac)
 
