@@ -65,11 +65,18 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                 subs_dict[f"k__{rna_symbol}__{arf_symbol}"] = "k__RNA__ARF"
 
         self.add_model_parameter(
-            "k__RNA__IAA", 1.0, "Rate of IAA production from RNA")
+            "k__RNA__IAA",
+            1.0,
+            "Rate of IAA production from RNA",
+            "production")
 
         if self.include_arf_transcription:
             self.add_model_parameter(
-                "k__RNA__ARF", 1.0, "Rate of ARF production from RNA")
+                "k__RNA__ARF",
+                1.0,
+                "Rate of ARF production from RNA",
+                "production"
+            )
 
         for key in list(self.get_parameter_names()):
             if "bind" in key:
@@ -199,12 +206,11 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
         promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
 
-        parameter_vars = sorted(list(self.get_default_parameters().keys()))
+        parameter_vars = sorted(list(self.get_default_parameters(parameter_subs_dict=parameter_subs_dict).keys()))
         state_vars = sorted(self.get_state_variable_names(
             include_promoter_vars=False))
 
         promoter_inputs = (state_vars, parameter_vars, free_variables)
-
         promoter_expr_jac_func = sp.lambdify(promoter_inputs,
                                              promoter_expr_jac)
 
@@ -399,6 +405,34 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return jac
 
+    def get_default_parameters(self, parameter_subs_dict: dict = None,
+                               omit_unused: bool = False):
+        """Return a default parameter set.
+
+        :param parameter_subs_dict: Dictionary of parameter substitutions to apply
+        :param omit_unused: If True, remove parameters that don't appear in model equations
+        :return: a dictionary of parameter values
+        """
+
+        dict = super().get_default_parameters(parameter_subs_dict=parameter_subs_dict,
+                                              omit_unused=False)
+
+        if omit_unused:
+            odes, free_variables, _, constraints\
+                = self.generate_ode_system(reduced=True,
+                                           parameter_subs_dict=parameter_subs_dict)
+
+            promoter_odes = constraints[0]
+
+            dict = {
+                p: v for p, v in dict.items()
+                if p in [str(s) for s in odes.free_symbols]
+                or p in [str(s) for s in promoter_odes.free_symbols]
+                or p in [str(s) for s in free_variables]
+            }
+
+        return dict
+
     def output_julia(self, aux_func_name: str = "", aux_func_params: List = [],
                      parameter_subs_dict: dict = None):
         """Generate julia code describing the model including the quasi steady-
@@ -419,7 +453,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         state_vars = self.get_state_variable_names(include_promoter_vars=False)
         default_parameters = self.get_default_parameters(
-            parameter_subs_dict=parameter_subs_dict)
+            parameter_subs_dict=parameter_subs_dict,
+            omit_unused=True
+        )
 
         promoter_vars = [s.name for s in super().get_state_variables()
                          if s.category == "promoter"]

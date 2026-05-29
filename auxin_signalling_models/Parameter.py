@@ -6,7 +6,6 @@ class Parameter(Variable):
     def __init__(self, *args, default_value: float = 1.0, **kwargs):
 
         super().__init__(*args, **kwargs)
-
         self.default_value = default_value
 
     def __key(self):
@@ -22,6 +21,7 @@ class Parameter(Variable):
         dict = {
             "name": self.name,
             "description": self.description,
+            "category": self.category,
             "default_value": self.default_value
         }
         return str(list(dict.values()))

@@ -146,7 +146,9 @@ class AuxinSignallingPathway:
 
         arf_decay = sp.sympify('d__arf__all')
         self.add_model_parameter(arf_decay, 1.0,
-                                 "decay rate of ARF proteins")
+                                 "decay rate of ARF proteins",
+                                 "decay"
+                                 )
 
         for _, arf in enumerate(self.arf_variables):
             self.add_reaction([], [arf.name], fwd_rates=[],
@@ -155,7 +157,9 @@ class AuxinSignallingPathway:
         if not include_arf_transcription:
             arf_production = sp.sympify('k__arf__all')
             self.add_model_parameter(arf_production, 1.0,
-                                     "production rate of ARF proteins")
+                                     "production rate of ARF proteins"
+                                     "production"
+                                     )
 
             for _, arf in enumerate(self.arf_variables):
                 self.add_reaction([], [arf.name], fwd_rates=[arf_production],
@@ -164,7 +168,8 @@ class AuxinSignallingPathway:
         iaa_decay = sp.sympify('d__iaa__all')
 
         self.add_model_parameter(iaa_decay, 1.0,
-                                 "decay rate of Aux/IAAs")
+                                 "decay rate of Aux/IAAs",
+                                 "decay")
 
         for _, iaa in enumerate(self.iaa_variables):
             self.add_reaction([], [iaa.name], bwd_rates=[iaa_decay])
@@ -175,10 +180,14 @@ class AuxinSignallingPathway:
 
             self.add_model_parameter(association_rate,
                                      0.001,
-                                     f"Association rate of dimer {d.name}")
+                                     f"Association rate of dimer {d.name}",
+                                     "dimerisation"
+                                     )
             self.add_model_parameter(dissociation_rate,
                                      0.1,
-                                     f"Dissociation rate of dimer {d.name}")
+                                     f"Dissociation rate of dimer {d.name}",
+                                     "dimerisation"
+                                     )
 
             reactants = d.components
             self.add_reaction([str(r) for r in reactants], [d.name], [association_rate],
@@ -186,8 +195,11 @@ class AuxinSignallingPathway:
 
         for iaa in self.iaa_variables:
             iaa_decay_rate = f"d__{iaa.name}__{self.auxin_variable_label}"
-            self.add_model_parameter(iaa_decay_rate, 0.1,
-                                     "rate of auxin-mediated decay of Aux/IAA")
+            self.add_model_parameter(iaa_decay_rate,
+                                     0.1,
+                                     "rate of auxin-mediated decay of Aux/IAA",
+                                     "decay"
+                                     )
             self.add_reaction([iaa.name], [self.empty_set_node.name],
                               [iaa_decay_rate],
                               enzymes=[self.auxin_variable_label])
@@ -206,11 +218,16 @@ class AuxinSignallingPathway:
 
             self.add_model_parameter(promoter_binding_rate,
                                      1.0,
-                                     f"binding rate for promoter {promoter.name}")
+                                     f"Association rate for promoter {promoter.name}",
+                                     "promoter binding",
+                                     )
+
             self.add_model_parameter(promoter_unbinding_rate,
                                      1.0,
-                                     "dissociation rate for promoter"
-                                     f"{promoter}")
+                                     "Dissociation rate for promoter "
+                                     f"{promoter.name}",
+                                     "promoter binding",
+                                     )
 
             self.add_reaction(
                 [unbound_promoter.name], [promoter.name],
@@ -226,17 +243,18 @@ class AuxinSignallingPathway:
 
         for promoter in self.promoter_variables:
             for rna in rna_variables:
-                rate = f"k__{promoter.name}__{rna.name}"
+                transcription_rate = f"k__{promoter.name}__{rna.name}"
 
-                self.add_model_parameter(rate,
+                self.add_model_parameter(transcription_rate,
                                          1.0,
                                          f"Rate of transcription "
                                          f"for {rna.name} for promoter "
-                                         f"{promoter.name}"
+                                         f"{promoter.name}",
+                                         "transcription",
                                          )
 
                 self.add_reaction(
-                    [], [rna.name], [rate],
+                    [], [rna.name], [transcription_rate],
                     [], [promoter.name], reaction_type="linear"
                 )
 
@@ -265,8 +283,18 @@ class AuxinSignallingPathway:
 
                     parameter_names = [p.name for p in self._parameters]
                     if promoter_binding_rate not in parameter_names:
-                        self.add_model_parameter(promoter_binding_rate)
-                        self.add_model_parameter(promoter_unbinding_rate)
+
+                        self.add_model_parameter(promoter_binding_rate,
+                                                 1.0,
+                                                 f"Association rate of {reactants[0]} and {reactants[1]} when bound to the promoter",
+                                                 "promoter binding"
+                                                 )
+                        self.add_model_parameter(promoter_unbinding_rate,
+                                                 1.0,
+                                                 f"Association rate of {reactants[0]} and {reactants[1]} when bound to the promoter",
+                                                 "promoter binding"
+                                                 )
+
                         self.add_reaction(
                             [partially_bound_promoter.name], [promoter.name],
                             [promoter_binding_rate], [],
@@ -284,8 +312,16 @@ class AuxinSignallingPathway:
 
                     parameter_names = [p.name for p in self._parameters]
                     if promoter_binding_rate not in parameter_names:
-                        self.add_model_parameter(promoter_binding_rate)
-                        self.add_model_parameter(promoter_unbinding_rate)
+                        self.add_model_parameter(promoter_binding_rate,
+                                                 1.0,
+                                                 f"Association rate for promoter and {reactants[0]}",
+                                                 category="promoter binding"
+                                                 )
+                        self.add_model_parameter(promoter_unbinding_rate,
+                                                 1.0,
+                                                 f"Dissociation rate for promoter and {reactants[0]}",
+                                                 category="promoter binidng"
+                                                 )
                         self.add_reaction(
                             [partially_bound_promoter.name], [promoter.name],
                             [promoter_binding_rate], [],
@@ -300,22 +336,26 @@ class AuxinSignallingPathway:
         rna_decay_rate = sp.sympify('d__R')
         self.add_model_parameter(rna_decay_rate,
                                  0.01,
-                                 "RNA decay rate")
+                                 "RNA decay rate",
+                                 "mRNA decay",
+                                 )
 
         for rna in rna_variables:
             self.add_reaction([self.empty_set_node.name], [
                 rna.name], [], [rna_decay_rate])
             prot = rna.name.split('__')[1]
 
-            production_rate = f"k__{rna.name}__{prot}"
+            translation_rate = f"k__{rna.name}__{prot}"
             rate_default_val = 1.0
 
-            self.add_model_parameter(production_rate, rate_default_val,
+            self.add_model_parameter(translation_rate, rate_default_val,
                                      f"Rate of production of {prot} from"
-                                     f"RNA {rna.name}")
+                                     f"RNA {rna.name}",
+                                     "mRNA production"
+                                     )
 
             self.add_reaction([], [prot],
-                              fwd_rates=[production_rate],
+                              fwd_rates=[translation_rate],
                               enzymes=[rna.name])
 
         self.rhs_func = None
@@ -324,7 +364,8 @@ class AuxinSignallingPathway:
         self.jac_func = None
 
     def add_model_parameter(self, label: str, default_value: float = 0.0,
-                            description: str = "", strict: bool = True,
+                            description: str = "", category: str = "",
+                            strict: bool = True,
                             make_unique: bool = False):
         """Add a new parameter to the model.
 
@@ -333,6 +374,7 @@ class AuxinSignallingPathway:
         :param default_value: Default value for the newly added
             parameter
         :param description: Short description of the new model parameter
+        :param category: Category indicating which part of the model the parameter belongs to (e.g. dimerisation)
         :param strict: If False, overwrite an existing parameter of the
             same name
 
@@ -364,7 +406,7 @@ class AuxinSignallingPathway:
                              f"in model: {self._parameters}")
 
         variable = Parameter(label, description=description, default_value=default_value,
-                             make_unique=make_unique)
+                             make_unique=make_unique, category=category)
 
         if variable in self.graph.nodes():
             raise ValueError(
@@ -571,10 +613,12 @@ class AuxinSignallingPathway:
             return [0]
 
         if variable not in reaction.reactants + reaction.products:
-            raise ValueError(f"Requested variable {variable} not found in {reaction}")
+            raise ValueError(
+                f"Requested variable {variable} not found in {reaction}")
 
         if variable in reaction.reactants and variable in reaction.products:
-            raise ValueError(f"Malformed reaction {reaction} with {variable} on both sides")
+            raise ValueError(
+                f"Malformed reaction {reaction} with {variable} on both sides")
 
         if reaction.reaction_type == 'linear':
             if variable in reaction.products:
@@ -857,17 +901,13 @@ class AuxinSignallingPathway:
         return _sorted_dict(ic_dict)
 
     def get_default_parameters(self, parameter_subs_dict: dict = None,
-                               ignore_unused: bool = False):
+                               omit_unused: bool = False):
         """Return a default parameter set.
 
         :param parameter_subs_dict: Dictionary of parameter substitutions to apply
-        :param ignore_unused: If True, remove parameters that don't appear in model equations
+        :param omit_unused: If True, remove parameters that don't appear in model equations
         :return: a dictionary of parameter values
         """
-
-        if ignore_unused:
-            _, _, parameters, _ = self.generate_ode_system(parameter_subs_dict)
-            return parameters
 
         if parameter_subs_dict is None:
             parameter_subs_dict = self.parameter_subs_dict.copy()
@@ -876,6 +916,17 @@ class AuxinSignallingPathway:
                       and len(sp.sympify(parameter_subs_dict[k.name]).free_symbols) == 1
                       else k.name: k.default_value
                       for k in self._parameters}
+
+        if omit_unused:
+            odes, free_variables, _, _ = self.generate_ode_system(
+                parameter_subs_dict=parameter_subs_dict)
+
+            param_dict = {
+                p: v for (p, v) in param_dict.items()
+                if p in [str(v) for v in odes.free_symbols]
+                or p in free_variables
+            }
+            pass
 
         # sort parameters
         param_dict = _sorted_dict(param_dict)
@@ -1288,16 +1339,52 @@ class AuxinSignallingPathway:
 
         return _sorted_dict(self.parameter_subs_dict)
 
-    def pretty_print_parameter_dict(self):
+    def generate_pretty_print_state_dict(self, group_by_category=True):
+        """Print all state variables in a LaTeX-maths format.
+
+        :param group_by_category: If true, group state variables according to their category field. Else, sort alphabetically
+
+        :returns: Dictionary of state variables and corresponding LaTeX
+        """
+        states = self.get_state_variables()
+
+        p_states_dict = {s.name: self.pretty_print_state(
+            s.name) for s in states}
+
+        if group_by_category:
+            states_dict = {p.name: p for p in sorted(list(states))}
+            return dict(
+                sorted(
+                    p_states_dict.items(),
+                    key=lambda kv: hash(states_dict[kv[0]].category)
+                )
+            )
+
+        return _sorted_dict(p_states_dict)
+
+    def generate_pretty_print_parameter_dict(self, group_by_category=True):
         """Print all model parameters in a LaTeX-maths format.
+
+        :param group_by_category: If true, group model parameters according to their category field. Else, sort alphabetically
 
         :returns: Dictionary of parameter labels in a LaTeX maths format
         """
 
-        ret_dict = {p: self.pretty_print_parameter(p)
-                    for p in sorted(list(self.get_default_parameters().keys()))}
+        pars = self.get_parameters()
+        ret_dict = {p.name: self.pretty_print_parameter(p.name)
+                    for p in sorted(list(pars))}
 
-        return ret_dict
+        pars_dict = {p.name: p for p in sorted(list(pars))}
+
+        if group_by_category:
+            return dict(
+                sorted(
+                    ret_dict.items(),
+                    key=lambda kv: hash(pars_dict[kv[0]].category)
+                )
+            )
+
+        return _sorted_dict(ret_dict)
 
     def get_parameter_names(self):
         return [p.name for p in self._parameters]
@@ -1333,6 +1420,23 @@ class AuxinSignallingPathway:
         rest = parts[2:]
 
         return f"{head}_{{{top}_{{{', '.join(rest)}}}}}"
+
+    @classmethod
+    def pretty_print_state(cls, state: str):
+        """Print a state in a LaTeX math format.
+
+        :param state: The parameter label to convert
+        :returns: A LaTeX-maths string
+        """
+        parts = state.split("__")
+
+        if len(parts) < 2:
+            return state
+
+        head = parts[0]
+        rest = parts[1:]
+
+        return f"{head}_{{{', '.join(rest)}}}"
 
 
 def _sorted_dict(_dict: dict):

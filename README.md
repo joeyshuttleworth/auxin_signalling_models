@@ -54,7 +54,13 @@ python3 -m pytest
 ```
 
 #### Optional myokit model generation
-To enable myokit model generation, the package must be installed with the 
+To enable myokit model generation, the package must be installed with the `myokit` optional dependencies like so,
+
+```
+pip install '.[myokit]'
+```
+
+You may need to follow the instructions to install myokit [myokit.org/install](myokit.org/install).
 
 #### Jupyter notebooks
 Various example Jupyter notebooks are provided in `notebooks`.
@@ -69,7 +75,7 @@ python3 -m pip install -e '.[test,notebook]'
 ```
 Then create and install a new kernel
 ```
-python3 -m ipykernel install --user --name auxin_signalling_models
+python3 -m ipykernel install --user --name auxin_signalling_models_kernel
 ```
 
 Then run
