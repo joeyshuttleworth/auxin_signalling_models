@@ -45,6 +45,9 @@ kwargs_list = [
     {'nARFs': 4, 'nIAAs': 2},
 ]
 
+kwargs_list = [kw | {"include_arf_transcription": False} for kw in kwargs_list] + \
+    [kw | {"include_arf_transcription": True} for kw in kwargs_list]
+
 test_models = [asp_class(**kwargs) for
                kwargs in kwargs_list]
 
@@ -136,7 +139,9 @@ class TestGeneratePathway:
 
             myokit_model = asp_model.generate_myokit_model()
 
-            myokit.save(os.path.join(output_dir, f"full_model_{i}.mmt"),
+            model_name = asp_model.get_model_name()
+
+            myokit.save(os.path.join(output_dir, f"full_model_{model_name}.mmt"),
                         myokit_model)
 
     def test_output_julia(self):
