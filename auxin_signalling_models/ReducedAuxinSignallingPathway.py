@@ -321,9 +321,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             expr[1] = expr[1].subs({s: 0 for s in promoter_var_labels})
 
             _func = sp.lambdify((promoter_inputs), expr[1])
-
-            def func(x, p, aux):
-                vals = np.zeros(len(expr[1]) + 1)
+            _dim = len(expr[1]) + 1
+            def func(x, p, aux, _func=_func, _dim=_dim):
+                vals = np.zeros(_dim)
                 vals[1:] = _func(x, p, aux).flatten()
                 vals[0] = 1 - vals[1:].sum()
                 return vals
@@ -333,6 +333,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         def rhs_func(y, t, p, aux):
             promoter_vals = np.concatenate([f(y, p, aux)
                                             for f in funcs])
+            print(promoter_vals)
             return np.array(_rhs_func(y, t, p, aux, promoter_vals),
                             dtype=np.float64).flatten()
 
