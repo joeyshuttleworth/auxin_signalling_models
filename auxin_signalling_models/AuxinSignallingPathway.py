@@ -534,6 +534,8 @@ class AuxinSignallingPathway:
                                      f"(strict=True). States are {states}")
 
         for rate in bwd_rates + fwd_rates:
+            if len(sp.sympify(rate).free_symbols) == 0:
+                continue
             if rate not in self.get_parameter_names():
                 if strict:
                     raise ValueError(f"rate {rate} not found in model. "
