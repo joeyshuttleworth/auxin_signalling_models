@@ -194,11 +194,12 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         promoter_vars = sorted([s.name for s in all_state_vars
                                 if s.category == "promoter"])
 
-        ## TODO use constraints field to find variables to simplify out
+        # TODO use constraints field to find variables to simplify out
 
         promoter_expr = constraints[0].T
 
-        connectivity_matrix = sp.Matrix([promoter_expr]).T.jacobian(sp.Matrix([promoter_vars]))
+        connectivity_matrix = sp.Matrix(
+            [promoter_expr]).T.jacobian(sp.Matrix([promoter_vars]))
 
         connectivity_matrix =\
             np.array([[connectivity_matrix[i, j]
@@ -248,17 +249,20 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
             promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
 
-            sub_promoter_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
+            sub_promoter_expr = - \
+                promoter_expr_jac.LUsolve(promoter_expr_inhomog)
 
             if use_cse:
                 replacements, expressions = sp.cse(sub_promoter_expr)
                 all_replacements.append(replacements)
-                expressions = [sp.sympify(1 - sum(promoter_var_vec))] + expressions
+                expressions = [sp.sympify(
+                    1 - sum(promoter_var_vec))] + expressions
                 all_expressions.append(expressions)
                 promoter_vars_included.append(promoter_vars)
 
             else:
-                expressions = [sp.sympify(1 - sum(promoter_var_vec))] + [sub_promoter_expr]
+                expressions = [sp.sympify(
+                    1 - sum(promoter_var_vec))] + [sub_promoter_expr]
                 all_expressions.append(expressions)
                 promoter_vars_included.append(promoter_vars)
 
@@ -322,6 +326,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
             _func = sp.lambdify((promoter_inputs), expr[1])
             _dim = len(expr[1]) + 1
+
             def func(x, p, aux, _func=_func, _dim=_dim):
                 vals = np.zeros(_dim)
                 vals[1:] = _func(x, p, aux).flatten()
@@ -385,7 +390,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                 promoter_expr.jacobian(state_vars)
             )
 
-            jac += odes.jacobian(sp.Matrix(promoter_vars[1:])) @ promoter_ss_jac
+            jac += odes.jacobian(
+                sp.Matrix(promoter_vars[1:])) @ promoter_ss_jac
 
         return jac
 
@@ -445,7 +451,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         )
 
         promoter_vars = [s.name for s in super().get_state_variables()
-                            if s.category == "promoter"]
+                         if s.category == "promoter"]
         code_str = f"function {self.__class__.__name__}_f_deriv!(dz, z, p, t=0.0)\n"
 
         code_str += "\t(" + ", ".join(state_vars) + ") = z\n\n"
