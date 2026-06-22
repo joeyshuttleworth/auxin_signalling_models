@@ -1,0 +1,27 @@
+,name,description,default_value
+0,k__G__ARF_1__iaa_1__R__ARF_1,Rate of transcription for R__ARF_1 for promoter G__ARF_1__iaa_1,1.0
+1,k__R__iaa_1__iaa_1,Rate of production of iaa_1 fromRNA R__iaa_1,1.0
+2,k__G__ARF_1,Association rate for promoter G__ARF_1,1.0
+3,d__iaa_1__x,rate of auxin-mediated decay of Aux/IAA,0.1
+4,d__D__ARF_1__iaa_1,Dissociation rate of dimer D__ARF_1__iaa_1,0.1
+5,k__G__ARF_1__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1,1.0
+6,d__D__iaa_1__iaa_1,Dissociation rate of dimer D__iaa_1__iaa_1,0.1
+7,d__G__ARF_1__iaa_1,Dissociation rate for promoter G__ARF_1__iaa_1,1.0
+8,k__G__ARF_1__ARF_1,Association rate for promoter G__ARF_1__ARF_1,1.0
+9,k__G__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G,1.0
+10,d__G__ARF_1,Dissociation rate for promoter G__ARF_1,1.0
+11,d__G__ARF_1__ARF_1,Dissociation rate for promoter G__ARF_1__ARF_1,1.0
+12,k__R__ARF_1__ARF_1,Rate of production of ARF_1 fromRNA R__ARF_1,1.0
+13,k__G__ARF_1__iaa_1__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__iaa_1,1.0
+14,k__D__iaa_1__iaa_1,Association rate of dimer D__iaa_1__iaa_1,0.001
+15,k__G__ARF_1__ARF_1__R__iaa_1,Rate of transcription for R__iaa_1 for promoter G__ARF_1__ARF_1,1.0
+16,d__arf__all,decay rate of ARF proteins,1.0
+17,d__D__ARF_1__ARF_1,Dissociation rate of dimer D__ARF_1__ARF_1,0.1
+18,k__G__ARF_1__R__ARF_1,Rate of transcription for R__ARF_1 for promoter G__ARF_1,1.0
+19,k__G__ARF_1__iaa_1,Association rate for promoter G__ARF_1__iaa_1,1.0
+20,d__iaa__all,decay rate of Aux/IAAs,1.0
+21,k__D__ARF_1__ARF_1,Association rate of dimer D__ARF_1__ARF_1,0.001
+22,k__G__R__ARF_1,Rate of transcription for R__ARF_1 for promoter G,1.0
+23,k__D__ARF_1__iaa_1,Association rate of dimer D__ARF_1__iaa_1,0.001
+24,k__G__ARF_1__ARF_1__R__ARF_1,Rate of transcription for R__ARF_1 for promoter G__ARF_1__ARF_1,1.0
+25,d__R,RNA decay rate,0.01

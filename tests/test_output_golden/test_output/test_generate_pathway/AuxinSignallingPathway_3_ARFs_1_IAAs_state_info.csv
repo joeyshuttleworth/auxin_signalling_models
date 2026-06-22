@@ -1,0 +1,29 @@
+,name,description,initial_condition,components,category
+0,ARF_1,,1.0,(),ARF
+1,ARF_2,,1.0,(),ARF
+2,ARF_3,,1.0,(),ARF
+3,D__ARF_1__ARF_1,Dimer of ARF_1 protein and ARF_1 protein,0.1,"('ARF_1', 'ARF_1')",dimer
+4,D__ARF_1__ARF_2,Dimer of ARF_1 protein and ARF_2 protein,0.1,"('ARF_1', 'ARF_2')",dimer
+5,D__ARF_1__ARF_3,Dimer of ARF_1 protein and ARF_3 protein,0.1,"('ARF_1', 'ARF_3')",dimer
+6,D__ARF_1__iaa_1,Dimer of ARF_1 protein and iaa_1 protein,0.1,"('ARF_1', 'iaa_1')",dimer
+7,D__ARF_2__ARF_2,Dimer of ARF_2 protein and ARF_2 protein,0.1,"('ARF_2', 'ARF_2')",dimer
+8,D__ARF_2__ARF_3,Dimer of ARF_2 protein and ARF_3 protein,0.1,"('ARF_2', 'ARF_3')",dimer
+9,D__ARF_2__iaa_1,Dimer of ARF_2 protein and iaa_1 protein,0.1,"('ARF_2', 'iaa_1')",dimer
+10,D__ARF_3__ARF_3,Dimer of ARF_3 protein and ARF_3 protein,0.1,"('ARF_3', 'ARF_3')",dimer
+11,D__ARF_3__iaa_1,Dimer of ARF_3 protein and iaa_1 protein,0.1,"('ARF_3', 'iaa_1')",dimer
+12,D__iaa_1__iaa_1,Dimer of iaa_1 protein and iaa_1 protein,0.1,"('iaa_1', 'iaa_1')",dimer
+13,G,Unbound promoter state,1.0,(),promoter
+14,G__ARF_1,,0.0,"('ARF_1',)",promoter
+15,G__ARF_1__ARF_1,,0.0,"('D__ARF_1__ARF_1',)",promoter
+16,G__ARF_1__ARF_2,,0.0,"('D__ARF_1__ARF_2',)",promoter
+17,G__ARF_1__ARF_3,,0.0,"('D__ARF_1__ARF_3',)",promoter
+18,G__ARF_1__iaa_1,,0.0,"('D__ARF_1__iaa_1',)",promoter
+19,G__ARF_2,,0.0,"('ARF_2',)",promoter
+20,G__ARF_2__ARF_2,,0.0,"('D__ARF_2__ARF_2',)",promoter
+21,G__ARF_2__ARF_3,,0.0,"('D__ARF_2__ARF_3',)",promoter
+22,G__ARF_2__iaa_1,,0.0,"('D__ARF_2__iaa_1',)",promoter
+23,G__ARF_3,,0.0,"('ARF_3',)",promoter
+24,G__ARF_3__ARF_3,,0.0,"('D__ARF_3__ARF_3',)",promoter
+25,G__ARF_3__iaa_1,,0.0,"('D__ARF_3__iaa_1',)",promoter
+26,R__iaa_1,RNA for protein iaa_1,0.0,(),mRNA
+27,iaa_1,,0.1,(),IAA
