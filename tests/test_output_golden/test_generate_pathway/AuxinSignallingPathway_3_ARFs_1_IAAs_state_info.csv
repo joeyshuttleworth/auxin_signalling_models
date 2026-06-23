@@ -25,5 +25,5 @@
 23,G__ARF_3,,0.0,"('ARF_3',)",promoter
 24,G__ARF_3__ARF_3,,0.0,"('D__ARF_3__ARF_3',)",promoter
 25,G__ARF_3__iaa_1,,0.0,"('D__ARF_3__iaa_1',)",promoter
-26,R__iaa_1,RNA for protein iaa_1,0.0,(),rna
+26,R__iaa_1,RNA for protein iaa_1,0.0,(),mRNA
 27,iaa_1,,0.1,(),IAA

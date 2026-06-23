@@ -127,7 +127,7 @@ class AuxinSignallingPathway:
         rna_variables = []
 
         for r in rna_var_labels:
-            _rna_var = self.add_state(r, category="rna",
+            _rna_var = self.add_state(r, category="mRNA",
                                       description=f"RNA for protein {r.split('__')[1]}",
                                       initial_condition=0.0)
             rna_variables.append(_rna_var)
@@ -157,7 +157,7 @@ class AuxinSignallingPathway:
         if not include_arf_transcription:
             arf_production = sp.sympify('k__arf__all')
             self.add_model_parameter(arf_production, 1.0,
-                                     "production rate of ARF proteins"
+                                     "production rate of ARF proteins",
                                      "production"
                                      )
 
@@ -534,6 +534,8 @@ class AuxinSignallingPathway:
                                      f"(strict=True). States are {states}")
 
         for rate in bwd_rates + fwd_rates:
+            if len(sp.sympify(rate).free_symbols) == 0:
+                continue
             if rate not in self.get_parameter_names():
                 if strict:
                     raise ValueError(f"rate {rate} not found in model. "
@@ -939,13 +941,12 @@ class AuxinSignallingPathway:
         :param output_path: an optional path for outputting the diagram
         """
 
-        if 'pos' not in kwargs:
-            kwargs['pos'] = nx.circular_layout(self.graph)
-
         if 'with_labels' not in kwargs:
             kwargs['with_labels'] = True
 
         graph = self.graph.copy()
+
+        mapping = {n: n.name for n in graph.nodes()}
 
         categories = sorted([str(val.category)
                             for val in graph.nodes() if val.category != "None"])
@@ -953,12 +954,14 @@ class AuxinSignallingPathway:
         categories = np.unique(categories)
 
         n_categories = len(categories)
-        palette = sns.color_palette("husl", n_categories)
+        palette = sns.color_palette("husl", n_categories + 1)
 
         if 'node_color' not in kwargs:
-            cmap = [categories.index(graph.nodes[node]['category'])
-                    if 'category' in graph.nodes[node] else 0
-                    for node in graph.nodes]
+            cmap = [1 + list(categories).index(node.category)
+                    if node.category in list(categories)
+                    else 0
+                    for node in graph.nodes
+                    ]
 
             cmap = [palette[index] for index in cmap]
             kwargs['node_color'] = cmap
@@ -983,6 +986,12 @@ class AuxinSignallingPathway:
                 e_cmap.append(e_palette[e_categories.index(cat)])
 
             kwargs['edge_color'] = e_cmap
+
+        graph = nx.relabel_nodes(graph, mapping)
+        print(graph)
+
+        if 'pos' not in kwargs:
+            kwargs['pos'] = nx.circular_layout(graph)
 
         nx.draw(graph, **kwargs)
 

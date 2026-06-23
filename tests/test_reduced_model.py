@@ -70,6 +70,26 @@ class TestReducedModel:
 
         return res, success
 
+    def test_multi_promoter_model(self):
+        asp_model = reduced_asp_class()
+
+        asp_model.add_state("G2", category="promoter")
+        asp_model.add_state("G2__ARF_1", category="promoter")
+        asp_model.add_reaction(["G2"], ["G2__ARF_1"], [0.1], [1])
+
+        solver = asp_model.make_forward_solver()
+        ts = np.linspace(0, 0.1, 2)
+
+        param_dict = asp_model.get_default_parameters()
+        param_dict = {k: 1.0 for k in param_dict}
+
+        ic_dict = asp_model.get_default_initial_conditions()
+        ic_dict = {k: 1.0 for k in ic_dict}
+
+        res, success = solver(ts, param_dict, ic_dict, 0.99)
+
+        assert success
+
     def test_generate_solve_ode(self, request):
         ignore_golden = request.config.getoption("ignore_golden")
 

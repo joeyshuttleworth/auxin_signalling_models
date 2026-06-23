@@ -169,59 +169,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return super().output_latex(reduced=True, **kwargs)
 
-    def get_promoter_ode_funcs(self, parameter_subs_dict=None):
-        """Construct two functions used to compute the solution to the
-        promoter-protein component of the model under a quasi steady-state
-        assumption.
-
-        :param parameter_subs_dict: A dictionary of parameter substitutions
-
-        :return: 2-tuple - an expression for the jacobian of the derivative function, and an expression for the inhomogenous part
-        """
-
-        odes, free_variables, _, constraints =\
-            self.generate_ode_system(reduced=True,
-                                     parameter_subs_dict=parameter_subs_dict)
-
-        #  Assume the promoter expression is the only constraint
-
-        promoter_vars = sorted([s.name for s in self.get_state_variables()
-                                if s.category == "promoter"])
-
-        promoter_exprs = constraints[0]
-        promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
-        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
-                                                          for s in promoter_vars[1:]])})
-
-        promoter_expr_jac = self.simplify_expr(
-            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T))
-
-        promoter_expr_inhomog = self.simplify_expr(promoter_expr - promoter_expr_jac
-                                                   @ sp.Matrix([promoter_vars[1:]]).T)
-
-        subs_dict = {p: '0' for p in [s.name for s in self.promoter_variables]}
-
-        #  We know that these expressions dont depend on the promoter variables
-        #  so this is a cheap and easy way to simplify them
-        promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
-        promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
-
-        parameter_vars = sorted(list(self.get_default_parameters(parameter_subs_dict=parameter_subs_dict).keys()))
-        state_vars = sorted(self.get_state_variable_names(
-            include_promoter_vars=False))
-
-        promoter_inputs = (state_vars, parameter_vars, free_variables)
-        promoter_expr_jac_func = sp.lambdify(promoter_inputs,
-                                             promoter_expr_jac)
-
-        inhomog_expr_func = sp.lambdify(
-            promoter_inputs, promoter_expr_inhomog)
-
-        return promoter_expr_jac_func, inhomog_expr_func
-
-    def get_promoter_expr(self, parameter_subs_dict=None, use_cse=True):
-        """Generate a sympy expression for the time-derivative of the promoter
-        component of the model under a quasi steady-state assumption.
+    def get_promoter_steady_state_exprs(self, parameter_subs_dict=None, use_cse=True):
+        """Generate a sympy expression for the steady-state of the promoter
+        component (fast) of the model under a quasi steady-state assumption.
 
         :param parameter_subs_dict: A dictionary of parameter
             substitutions
@@ -236,37 +186,90 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             parameter_subs_dict = self.parameter_subs_dict
 
         odes, free_variables, parameters, constraints =\
-            self.generate_ode_system(reduced=True,
-                                     parameter_subs_dict=parameter_subs_dict)
+            self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
+                                     reduced=True)
 
-        promoter_vars = sorted([s.name for s in super().get_state_variables()
+        all_state_vars = sorted(list(s for s in self.get_state_variables()))
+
+        promoter_vars = sorted([s.name for s in all_state_vars
                                 if s.category == "promoter"])
 
-        promoter_exprs = constraints[0]
-        promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
-        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
-                                                          for s in promoter_vars[1:]])})
+        # TODO use constraints field to find variables to simplify out
 
-        promoter_expr_jac = sp.expand(
-            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T)
-        )
+        promoter_expr = constraints[0].T
 
-        promoter_expr_inhomog = sp.expand(sp.Matrix(promoter_expr) -
-                                          sp.Matrix(promoter_expr_jac)
-                                          @
-                                          sp.Matrix([promoter_vars[1:]]).T)
+        connectivity_matrix = sp.Matrix(
+            [promoter_expr]).T.jacobian(sp.Matrix([promoter_vars]))
 
-        subs_dict = {p: '0' for p in [s.name for s in self.promoter_variables]}
-        promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
-        promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
+        connectivity_matrix =\
+            np.array([[connectivity_matrix[i, j]
+                       for j in range(connectivity_matrix.shape[1])]
+                      for i in range(connectivity_matrix.shape[0])]).astype(bool)
 
-        promoter_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
+        connectivity_matrix &= connectivity_matrix.T
+
+        connected_components = _get_connected_components(connectivity_matrix)
 
         if use_cse:
-            replacements, expressions = sp.cse(promoter_expr)
-            return replacements, expressions
+            all_replacements = []
+            all_expressions = []
+        else:
+            all_expressions = []
 
-        return promoter_expr
+        promoter_vars_included = []
+        full_promoter_vars = promoter_vars
+        full_promoter_expr = promoter_expr
+
+        for component in connected_components:
+            promoter_vars = [v for i, v in enumerate(full_promoter_vars)
+                             if i in component]
+
+            promoter_var_vec = sp.Matrix(promoter_vars[1:])
+
+            promoter_expr = full_promoter_expr[list(component), :]
+
+            sub_promoter_expr = sp.Matrix([promoter_expr[1:, :]])
+
+            sub_promoter_expr = \
+                sub_promoter_expr.subs(
+                    {promoter_vars[0]: 1 - sum([sp.sympify(s)
+                                                for s in promoter_vars[1:]])})
+
+            promoter_expr_jac = sp.expand(
+                sub_promoter_expr.jacobian(promoter_var_vec)
+            )
+
+            promoter_expr_inhomog = sp.expand(sp.Matrix(sub_promoter_expr) -
+                                              sp.Matrix(promoter_expr_jac)
+                                              @
+                                              promoter_var_vec)
+
+            subs_dict = {s: '0' for s in full_promoter_vars}
+
+            promoter_expr_inhomog = promoter_expr_inhomog.subs(subs_dict)
+            promoter_expr_jac = promoter_expr_jac.subs(subs_dict)
+
+            sub_promoter_expr = - \
+                promoter_expr_jac.LUsolve(promoter_expr_inhomog)
+
+            if use_cse:
+                replacements, expressions = sp.cse(sub_promoter_expr)
+                all_replacements.append(replacements)
+                expressions = [sp.sympify(
+                    1 - sum(promoter_var_vec))] + expressions
+                all_expressions.append(expressions)
+                promoter_vars_included.append(promoter_vars)
+
+            else:
+                expressions = [sp.sympify(
+                    1 - sum(promoter_var_vec))] + [sub_promoter_expr]
+                all_expressions.append(expressions)
+                promoter_vars_included.append(promoter_vars)
+
+        if use_cse:
+            return promoter_vars_included, all_replacements, all_expressions
+        else:
+            return promoter_vars_included, all_expressions
 
     def generate_rhs_func(self, parameter_subs_dict=None,
                           compute_QSS_values=True):
@@ -293,7 +296,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         param_names = list(parameters.keys())
         state_vars = super().get_state_variables()
         promoter_var_labels = [
-            s.name for s in state_vars if s.category == "promoter"]
+            s.name for s in state_vars if s.category == "promoter"
+        ]
 
         state_var_labels = self.get_state_variable_names(
             include_promoter_vars=False)
@@ -311,19 +315,30 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         if not compute_QSS_values:
             return _rhs_func
 
-        # steady state doesn't depend on promoter states provided conservation
-        promoter_expr_jac_func, inhomog_expr_func\
-            = self.get_promoter_ode_funcs(parameter_subs_dict=parameter_subs_dict)
+        _, promoter_exprs =\
+            self.get_promoter_steady_state_exprs(parameter_subs_dict=parameter_subs_dict,
+                                                 use_cse=False)
+
+        funcs = []
+        promoter_inputs = (state_var_labels, param_names, free_variables)
+        for expr in promoter_exprs:
+            expr[1] = expr[1].subs({s: 0 for s in promoter_var_labels})
+
+            _func = sp.lambdify((promoter_inputs), expr[1])
+            _dim = len(expr[1]) + 1
+
+            def func(x, p, aux, _func=_func, _dim=_dim):
+                vals = np.zeros(_dim)
+                vals[1:] = _func(x, p, aux).flatten()
+                vals[0] = 1 - vals[1:].sum()
+                return vals
+
+            funcs.append(func)
 
         def rhs_func(y, t, p, aux):
-            promoter_expr_jac = promoter_expr_jac_func(y, p, aux)\
-                .astype(np.float64)
-            inhomog_val = inhomog_expr_func(y, p, aux).astype(np.float64)
-            promoter_vals = np.linalg.solve(
-                promoter_expr_jac, -inhomog_val).flatten()
-            G = 1.0 - np.sum(promoter_vals)
-            promoter_vals = np.concatenate((np.array([G]), promoter_vals))
-
+            promoter_vals = np.concatenate([f(y, p, aux)
+                                            for f in funcs])
+            print(promoter_vals)
             return np.array(_rhs_func(y, t, p, aux, promoter_vals),
                             dtype=np.float64).flatten()
 
@@ -337,37 +352,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         all_states = self.get_state_variables(*args, **kwargs)
         return [s for s in all_states if s.category == "promoter"]
-
-    def get_promoter_steady_state_expr(self, parameter_subs_dict=None):
-        """Make a sympy expression giving quasi steady state promoter variables
-        given values for all other state variables.
-
-        :param parameter_subs_dict: A dictionary of parameter
-            substitutions
-        :return: A sympy expression for the promoter quasi steady state
-        """
-
-        odes, free_variables, parameters, \
-            constraints = self.generate_ode_system(parameter_subs_dict=parameter_subs_dict,
-                                                   reduced=True)
-
-        promoter_vars = sorted([s.name for s in self.get_state_variables()
-                                if s.category == "promoter"])
-
-        promoter_exprs = constraints[0]
-        promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
-        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
-                                                          for s in promoter_vars[1:]])})
-
-        promoter_expr_jac = sp.Matrix(
-            promoter_expr.jacobian(sp.Matrix([promoter_vars[1:]]).T)
-        )
-
-        promoter_expr_inhomog = self.simplify_expr(promoter_expr - promoter_expr_jac
-                                                   @ sp.Matrix([promoter_vars[1:]]).T)
-        promoter_ss_expr = -promoter_expr_jac.LUsolve(promoter_expr_inhomog)
-
-        return promoter_ss_expr
 
     def get_jacobian_expr(self, parameter_subs_dict=None):
         """Construct a sympy expression for the jacobian of the modes'
@@ -383,25 +367,31 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         promoter_vars = sorted([s.name for s in self.get_state_variables()
                                 if s.category == "promoter"])
 
-        promoter_exprs = constraints[0]
-        promoter_expr = sp.Matrix([promoter_exprs[1:]]).T
-        promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
-                                                          for s in promoter_vars[1:]])})
         state_vars = sorted(self.get_state_variable_names(
             include_promoter_vars=False))
 
-        promoter_ss_expr = self.get_promoter_steady_state_expr(
-            parameter_subs_dict)
+        # Start with non QSS terms
+        jac = sp.Matrix(self.simplify_expr(odes.jacobian(state_vars)))
 
-        sub_dict = {g: '0' for g in [s.name for s in
-                                     self.promoter_variables]}
-        promoter_ss_expr = promoter_ss_expr.subs(sub_dict)
-        promoter_ss_jac = self.simplify_expr(
-            promoter_ss_expr.jacobian(state_vars)
-        )
+        promoter_vars_list, expressions_list = \
+            self.get_promoter_steady_state_exprs(parameter_subs_dict=parameter_subs_dict,
+                                                 use_cse=False)
 
-        jac = sp.Matrix(self.simplify_expr(odes.jacobian(state_vars)
-                                           + odes.jacobian(sp.Matrix(promoter_vars[1:])) @ promoter_ss_jac))
+        # Loop over each strongly-connected QSS component, adding additional terms
+        for promoter_vars, expressions in zip(promoter_vars_list, expressions_list):
+            promoter_expr = expressions[1]
+            promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
+                                                              for s in promoter_vars[1:]])})
+
+            sub_dict = {g: '0' for g in promoter_vars}
+            promoter_expr = promoter_expr.subs(sub_dict)
+
+            promoter_ss_jac = self.simplify_expr(
+                promoter_expr.jacobian(state_vars)
+            )
+
+            jac += odes.jacobian(
+                sp.Matrix(promoter_vars[1:])) @ promoter_ss_jac
 
         return jac
 
@@ -436,22 +426,25 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
     def output_julia(self, aux_func_name: str = "", aux_func_params: List = [],
                      parameter_subs_dict: dict = None):
         """Generate julia code describing the model including the quasi steady-
-        state assumption.
+            state assumption.
 
-        :param aux_func_name: A julia function name for an externally
-            defined auxin-input signal
-        :param aux_func_params: Optional parameters to include for the
-            auxin input function
-        :param parameter_subs_dict: A dictionary of parameter
-            substitutions
-        :returns: A string contianing a julia function definition
-        """
+            :param aux_func_name: A julia function name for an externally
+                defined auxin-input signal
+            :param aux_func_params: Optional parameters to include for the
+                auxin input function
+            :param parameter_subs_dict: A dictionary of parameter
+                substitutions
+            :returns: A string contianing a julia function definition
+            """
 
         odes, free_variables, parameters, \
             constraints = self.generate_ode_system(
                 parameter_subs_dict=parameter_subs_dict)
 
         state_vars = self.get_state_variable_names(include_promoter_vars=False)
+        odes, vars = list(zip(*[[ode, var] for ode, var in zip(odes, state_vars)
+                                if "promoter" not in var]))
+
         default_parameters = self.get_default_parameters(
             parameter_subs_dict=parameter_subs_dict,
             omit_unused=True
@@ -475,15 +468,24 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         # Use common sub expressions to simplify function
         # This is especially important if you're going to do auto-diff in julia
-        replacements, expressions = self.get_promoter_expr(use_cse=True)
-        for r, expr in replacements:
-            code_str += f"\t{r} = {julia_code(expr)}" + "\n"
+        promoter_subsets, all_replacements, all_expressions =\
+            self.get_promoter_steady_state_exprs(use_cse=True)
 
-        code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " +\
-            julia_code(expressions[0]) + "\n\n"
+        for i, (promoter_vars, replacements, expressions) in \
+                enumerate(zip(promoter_subsets, all_replacements, all_expressions)):
+            dummy_vars = [v for (v, _) in replacements]
 
-        code_str += f"\t {promoter_vars[0]} = " \
-            f"1 - ({' + '.join(promoter_vars[1:])})\n\n"
+            # Substitute in some extra characters so we don't shadow vars
+            dummy_sub_dict = {v: f"__{i}__{v}" for v in dummy_vars}
+            for r, expr in replacements:
+                code_str += f"\t{dummy_sub_dict[r]} =" +\
+                    f"{julia_code(expr.subs(dummy_sub_dict))}" + "\n"
+
+            code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " +\
+                julia_code(expressions[1].subs(dummy_sub_dict)) + "\n\n"
+
+            code_str += f"\t {promoter_vars[0]} = " +\
+                julia_code(expressions[0].subs(dummy_sub_dict)) + "\n\n"
 
         code_str += "\tdz .= (" + str(julia_code(odes))[1:-1] + ")\n\n"
         code_str += "end"
@@ -539,3 +541,47 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         """
 
         return expr
+
+
+def _get_connected_components(mat):
+    """
+    Compute strongly-connected components of a matrix.
+
+    Matrix is explored from column 0 downwards.
+
+    :param: mat a adjacency matrix for a graph
+
+    :returns: A list of connected components (a list of sets of integers).
+    """
+
+    assert mat.shape[0] == mat.shape[1]
+    N = mat.shape[0]
+
+    assert N > 0
+
+    unexplored = list(range(N))
+
+    node = unexplored[0]
+
+    components = []
+    this_component = []
+
+    def get_next_node(m, connected_nodes, unexplored_nodes):
+        for i in set(unexplored_nodes):
+            for j in set(connected_nodes):
+                if m[i, j] and m[j, i]:
+                    return i
+        return None
+
+    while node is not None:
+        unexplored.remove(node)
+        this_component.append(node)
+        node = get_next_node(mat, this_component, unexplored)
+
+        if node is None:
+            components.append(set(this_component))
+            if len(unexplored) > 0:
+                node = unexplored[0]
+            this_component = []
+
+    return components
