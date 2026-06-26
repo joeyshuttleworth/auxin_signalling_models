@@ -988,7 +988,6 @@ class AuxinSignallingPathway:
             kwargs['edge_color'] = e_cmap
 
         graph = nx.relabel_nodes(graph, mapping)
-        print(mapping, graph)
 
         if 'pos' not in kwargs:
             kwargs['pos'] = nx.circular_layout(graph)
