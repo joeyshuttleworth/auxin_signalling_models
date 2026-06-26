@@ -363,7 +363,7 @@ class AuxinSignallingPathway:
 
         self.jac_func = None
 
-    def add_model_parameter(self, label: str, default_value: float = 0.0,
+    def add_model_parameter(self, label: str, default_value: float = 1.0,
                             description: str = "", category: str = "",
                             strict: bool = True,
                             make_unique: bool = False):
@@ -440,7 +440,7 @@ class AuxinSignallingPathway:
 
         variable = StateVariable(label, **kwargs)
 
-        if strict and label in self.graph.nodes():
+        if strict and label in self.get_state_variable_names():
             raise ValueError(
                 f"Tried to add state {label} to the model but it already exists (strict=True)"
             )
@@ -960,7 +960,7 @@ class AuxinSignallingPathway:
             cmap = [1 + list(categories).index(node.category)
                     if node.category in list(categories)
                     else 0
-                    for node in graph.nodes
+                    for node in graph.nodes()
                     ]
 
             cmap = [palette[index] for index in cmap]
@@ -988,7 +988,7 @@ class AuxinSignallingPathway:
             kwargs['edge_color'] = e_cmap
 
         graph = nx.relabel_nodes(graph, mapping)
-        print(graph)
+        print(mapping, graph)
 
         if 'pos' not in kwargs:
             kwargs['pos'] = nx.circular_layout(graph)
