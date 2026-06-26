@@ -43,6 +43,8 @@ class AuxinSignallingPathway:
         :param aux_func: Optional time-dependent auxin-signal input function of the form f(t)
         """
 
+        self.auxin_variable_label = 'x'
+
         self.include_arf_transcription = include_arf_transcription
         self.QSS_bound_species = {}
         self.parameter_subs_dict = {}
@@ -134,7 +136,6 @@ class AuxinSignallingPathway:
 
         self.rna_variables = rna_variables
 
-        self.auxin_variable_label = 'x'
         self.auxin_variable = self.add_state(
             self.auxin_variable_label, category='None',
             initial_condition=1.0
