@@ -961,7 +961,7 @@ class AuxinSignallingPathway:
             cmap = [1 + list(categories).index(node.category)
                     if node.category in list(categories)
                     else 0
-                    for node in graph.nodes()
+                    for node in graph.nodes
                     ]
 
             cmap = [palette[index] for index in cmap]
