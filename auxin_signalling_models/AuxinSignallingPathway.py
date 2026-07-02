@@ -705,7 +705,7 @@ class AuxinSignallingPathway:
         constraints = []
 
         if parameter_subs_dict:
-            odes = odes.subs(parameter_subs_dict)
+            odes = odes.subs(parameter_subs_dict).subs(parameter_subs_dict)
 
         parameters = self.get_default_parameters(
             parameter_subs_dict=parameter_subs_dict)
@@ -1178,28 +1178,33 @@ class AuxinSignallingPathway:
 
         self.remove_state(state, *args, strict=strict, **kwargs)
 
-    def generate_myokit_model(self, name: str = "",
-                              eliminate_promoter_state: str = ""):
+    def generate_myokit_model(self, name: str = None,
+                              eliminate_promoter_state: str = "",
+                              parameters: dict = None
+                              ):
         """Generate myokit code for the model.
 
         This method is unimplemented
 
         :param name: A label for the created myokit model
-            :eliminate_promoter_state: The state to be eliminated from
-            the promoter component of the model (str)
+        :param eliminate_promoter_state: The state to be eliminated from
+             the promoter component of the model (str)
+        :param parameters: dictionary of parameter values
         :raises: NotImplementedError
         :raises: ImportError if myokit not installed
         """
         if not myokit:
             raise ImportError("Install extra: pip install mypackage[myokit]")
 
-        if not name:
+        if name is None:
             name = self.__class__.__name__
+
+        if parameters is None:
+            parameters = self.get_default_parameters()
 
         odes, free_variables, _, _ = self.generate_ode_system()
 
         state_variables = self.get_state_variable_names()
-        param_dict = self.get_default_parameters()
 
         model = myokit.Model(name)
 
@@ -1223,8 +1228,8 @@ class AuxinSignallingPathway:
         comp[self.auxin_variable_label].set_rhs(0.0)
         comp[self.auxin_variable_label].set_binding('pace')
 
-        for parameter, ic in param_dict.items():
-            comp.add_variable(parameter)
+        for parameter, ic in parameters.items():
+            comp.add_variable(str(parameter))
             comp[parameter].set_rhs(ic)
 
         for state in state_variables:
@@ -1244,6 +1249,7 @@ class AuxinSignallingPathway:
                 continue
             ic = default_initial_conditions[state]
             comp[state].promote(ic)
+
             mk_expr = str(ode).replace('**', '^')
             comp[state].set_rhs(mk_expr)
 
