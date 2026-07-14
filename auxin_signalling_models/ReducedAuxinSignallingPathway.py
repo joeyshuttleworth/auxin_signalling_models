@@ -235,9 +235,12 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                     {promoter_vars[0]: 1 - sum([sp.sympify(s)
                                                 for s in promoter_vars[1:]])})
 
-            promoter_expr_jac = sp.expand(
-                sub_promoter_expr.jacobian(promoter_var_vec)
-            )
+            if len(promoter_var_vec) >= 1:
+                promoter_expr_jac = sp.expand(
+                    sub_promoter_expr.jacobian(promoter_var_vec)
+                )
+            else:
+                raise ValueError(f"Single disconnected promoter state found {promoter_vars[0]}")
 
             promoter_expr_inhomog = sp.expand(sp.Matrix(sub_promoter_expr) -
                                               sp.Matrix(promoter_expr_jac)
@@ -338,7 +341,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         def rhs_func(y, t, p, aux):
             promoter_vals = np.concatenate([f(y, p, aux)
                                             for f in funcs])
-            print(promoter_vals)
             return np.array(_rhs_func(y, t, p, aux, promoter_vals),
                             dtype=np.float64).flatten()
 
