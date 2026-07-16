@@ -114,7 +114,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             promoter_odes = sp.Matrix([[ode for state_var, ode in zip(state_vars, odes)
                                         if state_var in promoter_vars]]).T
 
-            odes = odes.subs(parameter_subs_dict)
+            odes = odes.subs(parameter_subs_dict).subs(parameter_subs_dict)
 
             promoter_odes = sp.Matrix([[promoter_odes]]).T
             include_indices = [i for i, state in enumerate(state_vars)
@@ -235,9 +235,12 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                     {promoter_vars[0]: 1 - sum([sp.sympify(s)
                                                 for s in promoter_vars[1:]])})
 
-            promoter_expr_jac = sp.expand(
-                sub_promoter_expr.jacobian(promoter_var_vec)
-            )
+            if len(promoter_var_vec) >= 1:
+                promoter_expr_jac = sp.expand(
+                    sub_promoter_expr.jacobian(promoter_var_vec)
+                )
+            else:
+                raise ValueError(f"Single disconnected promoter state found {promoter_vars[0]}")
 
             promoter_expr_inhomog = sp.expand(sp.Matrix(sub_promoter_expr) -
                                               sp.Matrix(promoter_expr_jac)
@@ -379,8 +382,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         # Loop over each strongly-connected QSS component, adding additional terms
         for promoter_vars, expressions in zip(promoter_vars_list, expressions_list):
             promoter_expr = expressions[1]
-            promoter_expr = promoter_expr.subs({'G': 1 - sum([sp.sympify(s)
-                                                              for s in promoter_vars[1:]])})
+            promoter_expr = promoter_expr.subs({'G': 1.0 - sum([sp.sympify(s)
+                                                                for s in promoter_vars[1:]])})
 
             sub_dict = {g: '0' for g in promoter_vars}
             promoter_expr = promoter_expr.subs(sub_dict)
@@ -470,6 +473,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         promoter_subsets, all_replacements, all_expressions =\
             self.get_promoter_steady_state_exprs(use_cse=True)
 
+        if parameter_subs_dict is None:
+            parameter_subs_dict = self.get_parameter_substitution_dict()
+
         for i, (promoter_vars, replacements, expressions) in \
                 enumerate(zip(promoter_subsets, all_replacements, all_expressions)):
             dummy_vars = [v for (v, _) in replacements]
@@ -478,13 +484,14 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             dummy_sub_dict = {v: f"__{i}__{v}" for v in dummy_vars}
             for r, expr in replacements:
                 code_str += f"\t{dummy_sub_dict[r]} =" +\
-                    f"{julia_code(expr.subs(dummy_sub_dict))}" + "\n"
+                    f"{julia_code(expr.subs(dummy_sub_dict).subs(parameter_subs_dict))}" + "\n"
 
             code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " +\
-                julia_code(expressions[1].subs(dummy_sub_dict)) + "\n\n"
+                julia_code(expressions[1].subs(dummy_sub_dict).subs(parameter_subs_dict)) + \
+                "\n\n"
 
             code_str += f"\t {promoter_vars[0]} = " +\
-                julia_code(expressions[0].subs(dummy_sub_dict)) + "\n\n"
+                julia_code(expressions[0].subs(dummy_sub_dict).subs(parameter_subs_dict)) + "\n\n"
 
         code_str += "\tdz .= (" + str(julia_code(odes))[1:-1] + ")\n\n"
         code_str += "end"
