@@ -43,6 +43,8 @@ class AuxinSignallingPathway:
         :param aux_func: Optional time-dependent auxin-signal input function of the form f(t)
         """
 
+        self.auxin_variable_label = 'x'
+
         self.include_arf_transcription = include_arf_transcription
         self.QSS_bound_species = {}
         self.parameter_subs_dict = {}
@@ -134,7 +136,6 @@ class AuxinSignallingPathway:
 
         self.rna_variables = rna_variables
 
-        self.auxin_variable_label = 'x'
         self.auxin_variable = self.add_state(
             self.auxin_variable_label, category='None',
             initial_condition=1.0
@@ -363,7 +364,7 @@ class AuxinSignallingPathway:
 
         self.jac_func = None
 
-    def add_model_parameter(self, label: str, default_value: float = 0.0,
+    def add_model_parameter(self, label: str, default_value: float = 1.0,
                             description: str = "", category: str = "",
                             strict: bool = True,
                             make_unique: bool = False):
@@ -440,7 +441,7 @@ class AuxinSignallingPathway:
 
         variable = StateVariable(label, **kwargs)
 
-        if strict and label in self.graph.nodes():
+        if strict and label in self.get_state_variable_names():
             raise ValueError(
                 f"Tried to add state {label} to the model but it already exists (strict=True)"
             )
@@ -988,7 +989,6 @@ class AuxinSignallingPathway:
             kwargs['edge_color'] = e_cmap
 
         graph = nx.relabel_nodes(graph, mapping)
-        print(graph)
 
         if 'pos' not in kwargs:
             kwargs['pos'] = nx.circular_layout(graph)
