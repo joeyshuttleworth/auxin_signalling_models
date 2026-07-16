@@ -754,7 +754,7 @@ class AuxinSignallingPathway:
 
         return self.get_state_variable_names() + list(self._parameters)
 
-    def make_forward_solver(self, parameter_subs_dict: dict = None):
+    def make_forward_solver(self, parameter_subs_dict: dict = None, *args, **kwargs):
         """Generate a function which simulates the model.
 
         :param parameter_subs_dict: An optional dictionary of parameter substitutions
@@ -820,7 +820,9 @@ class AuxinSignallingPathway:
                 t_eval=ts,
                 method="LSODA",
                 args=[params, [aux]],
-                jac=lambda t, y, p, aux: jac_func(y, t, p, aux)
+                jac=lambda t, y, p, aux: jac_func(y, t, p, aux),
+                *args,
+                **kwargs
             )
 
             success = True
