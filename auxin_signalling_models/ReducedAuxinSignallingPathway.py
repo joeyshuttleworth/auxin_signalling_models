@@ -338,7 +338,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         def rhs_func(y, t, p, aux):
             promoter_vals = np.concatenate([f(y, p, aux)
                                             for f in funcs])
-            print(promoter_vals)
             return np.array(_rhs_func(y, t, p, aux, promoter_vals),
                             dtype=np.float64).flatten()
 
