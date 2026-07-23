@@ -182,9 +182,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             parameter_subs_dict=parameter_subs_dict, use_cse=False)
 
         promoter_var_labels = promoter_vars_included[0]
-        subs_dict = {promoter_var_labels[0]:
-                     1 - sum([sp.sympify(s) for s in promoter_var_labels[1:]])}
-
         state_labels = sorted(self.get_state_variable_names(
             include_promoter_vars=False))
         parameter_labels = sorted(self.get_default_parameters(
@@ -201,7 +198,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         _func = sp.lambdify(inputs, expr)
 
         if len(all_expressions) != 1:
-            raise NotImpementedError(
+            raise NotImplementedError(
                 f"Not implemented for models with less/more than one component: {len(all_expressions)} components present")
 
         def ret_func(x, p, aux, _dim=_dim):
