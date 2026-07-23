@@ -169,6 +169,46 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         return super().output_latex(reduced=True, **kwargs)
 
+    def generate_promoter_steady_state_func(self, parameter_subs_dict=None):
+        """
+        Generate a function to compute steady states for the QSS promoter component
+
+        :param parameter_subs_dict: Dictionary of parameter substitutions to use
+
+        :return: A function mapping a state-variable vector, parameter vector and auxiliary variables to a vector of steady-state values
+        """
+
+        promoter_vars_included, all_expressions = self.get_promoter_steady_state_exprs(parameter_subs_dict=parameter_subs_dict, use_cse=False)
+
+        promoter_var_labels = promoter_vars_included[0]
+        subs_dict = {promoter_var_labels[0]:
+                     1 - sum([sp.sympify(s) for s in promoter_var_labels[1:]])}
+
+        state_labels = sorted(self.get_state_variable_names(include_promoter_vars=False))
+        parameter_labels = sorted(self.get_default_parameters(parameter_subs_dict=parameter_subs_dict).keys())
+
+        print(all_expressions[0][1])
+        expr = all_expressions[0][1].subs({k: 0 for k in promoter_var_labels})
+
+        _dim = len(expr) + 1
+
+        print(expr)
+
+        inputs = (state_labels, parameter_labels, [self.auxin_variable_label])
+        _func = sp.lambdify(inputs, expr)
+
+        if len(all_expressions) != 1:
+            raise NotImpementedError(f"Not implemented for models with less/more than one component: {len(all_expressions)} components present")
+
+        def ret_func(x, p, aux, _dim=_dim):
+            vec = np.zeros(_dim)
+            vec[1:] = _func(x, p, aux).flatten()
+            vec[0] = 1 - vec[1:].sum()
+
+            return vec.flatten()
+
+        return promoter_vars_included, ret_func
+
     def get_promoter_steady_state_exprs(self, parameter_subs_dict=None, use_cse=True):
         """Generate a sympy expression for the steady-state of the promoter
         component (fast) of the model under a quasi steady-state assumption.
