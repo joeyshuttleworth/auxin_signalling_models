@@ -73,7 +73,7 @@ class TestReducedModel:
     def test_promoter_ss_func(self):
         model = reduced_asp_class()
         vars, promoter_ss_func = \
-            model.get_promoter_steady_state_func()
+            model.generate_promoter_steady_state_func()
 
         state_vars = sorted(model.get_state_variable_names(include_promoter_vars=False))
 
