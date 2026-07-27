@@ -70,6 +70,23 @@ class TestReducedModel:
 
         return res, success
 
+    def test_promoter_ss_func(self):
+        model = reduced_asp_class()
+        vars, promoter_ss_func = \
+            model.generate_promoter_steady_state_func()
+
+        state_vars = sorted(model.get_state_variable_names(include_promoter_vars=False))
+        params = sorted(model.get_default_parameters().keys())
+
+        x = [1.0 for s in state_vars]
+        p = [1.0 for p in params]
+
+        no_promoter_vars = len([x for x in model.get_state_variables() if x.category == "promoter"])
+        assert len(vars[0]) == no_promoter_vars
+        vec = promoter_ss_func(x, p, [1.0])
+
+        assert len(vec) == len(vars[0])
+
     def test_multi_promoter_model(self):
         asp_model = reduced_asp_class()
 
