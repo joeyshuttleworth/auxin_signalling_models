@@ -1300,7 +1300,7 @@ class AuxinSignallingPathway:
         """
 
         if not strict:
-            param_subs_dict = {k: v for k, v in param_subs_dict
+            param_subs_dict = {k: v for k, v in param_subs_dict.items()
                                if k in self.get_default_parameters().keys()}
 
         else:
