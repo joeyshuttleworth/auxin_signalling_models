@@ -501,7 +501,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         code_str += "\t(" + ", ".join(state_vars) + ") = z\n\n"
 
         if not aux_func_name:
-            code_str += "\t(" + ", ".join(list(default_parameters.keys()) + aux_func_params) + ", " +\
+            code_str += "\t(" + ", ".join(sorted(list(default_parameters.keys())) + aux_func_params) + ", " +\
                 f"{self.auxin_variable_label}) = p\n\n"
         else:
             code_str += "\t(" +\
