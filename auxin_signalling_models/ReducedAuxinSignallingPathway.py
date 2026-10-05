@@ -37,8 +37,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                 assoc_rate = "k__" + state.name
                 dissoc_rate = "d__" + state.name
 
-                self.remove_parameter(assoc_rate)
-                self.remove_parameter(dissoc_rate)
+                # Set strict=False to remove associated reactions
+                self.remove_parameter(assoc_rate, strict=False)
+                self.remove_parameter(dissoc_rate, strict=False)
 
         if simple_promoter_states:
             for promoter in self.promoter_variables[:]:

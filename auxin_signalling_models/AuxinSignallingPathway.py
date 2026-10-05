@@ -1123,17 +1123,19 @@ class AuxinSignallingPathway:
         if rate in self._parameters:
             self._parameters.remove(rate)
 
-        reaction_set_list = self._reactions_set
+        if not remove_reactions:
+            return
+
+        reaction_set_list = []
+
         # Remove any reaction that includes this state, also
         for reaction in self._reactions_set:
-            if rate.name not in list(reaction.products) + list(reaction.reactants)\
-               + list(reaction.enzymes):
-                if remove_reactions:
-                    continue
+            if rate.name not in list(reaction.fwd_rates) + list(reaction.bwd_rates):
                 if strict:
                     raise ValueError(f"Tried to remove parameter {rate_name} but it is present in reaction {reaction}")
                 reaction_set_list.append(reaction)
 
+        self._reactions_set = set(reaction_set_list)
 
     def remove_state(self, state: StateVariable, strict: bool = True):
         """Remove a state from the model.
