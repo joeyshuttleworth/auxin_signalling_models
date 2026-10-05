@@ -1090,7 +1090,8 @@ class AuxinSignallingPathway:
         """
         raise NotImplementedError()
 
-    def remove_parameter(self, rate_name: str, strict: bool = True):
+    def remove_parameter(self, rate_name: str, strict: bool = True,
+                         remove_reactions: bool = True):
         """Remove a parameter from the model.
 
         This method removes the parameter from the dictionary,
@@ -1121,6 +1122,18 @@ class AuxinSignallingPathway:
 
         if rate in self._parameters:
             self._parameters.remove(rate)
+
+        reaction_set_list = self._reactions_set
+        # Remove any reaction that includes this state, also
+        for reaction in self._reactions_set:
+            if rate.name not in list(reaction.products) + list(reaction.reactants)\
+               + list(reaction.enzymes):
+                if remove_reactions:
+                    continue
+                if strict:
+                    raise ValueError(f"Tried to remove parameter {rate_name} but it is present in reaction {reaction}")
+                reaction_set_list.append(reaction)
+
 
     def remove_state(self, state: StateVariable, strict: bool = True):
         """Remove a state from the model.
