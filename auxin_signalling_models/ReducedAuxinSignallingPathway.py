@@ -188,12 +188,9 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         parameter_labels = sorted(self.get_default_parameters(
             parameter_subs_dict=parameter_subs_dict).keys())
 
-        print(all_expressions[0][1])
         expr = all_expressions[0][1].subs({k: 0 for k in promoter_var_labels})
 
         _dim = len(expr) + 1
-
-        print(expr)
 
         inputs = (state_labels, parameter_labels, [self.auxin_variable_label])
         _func = sp.lambdify(inputs, expr)
@@ -235,8 +232,6 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
 
         promoter_vars = sorted([s.name for s in all_state_vars
                                 if s.category == "promoter"])
-
-        # TODO use constraints field to find variables to simplify out
 
         promoter_expr = constraints[0].T
 
@@ -469,7 +464,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
         return dict
 
     def output_julia(self, aux_func_name: str = "", aux_func_params: List = [],
-                     parameter_subs_dict: dict = None):
+                     parameter_subs_dict: dict = None,
+                     use_cse: bool = True):
         """Generate julia code describing the model including the quasi steady-
             state assumption.
 
@@ -479,6 +475,8 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                 auxin input function
             :param parameter_subs_dict: A dictionary of parameter
                 substitutions
+            :param use_cse: If True, use sympy's common sub-expressions method
+            to simplfy expressions
             :returns: A string contianing a julia function definition
             """
 
@@ -511,31 +509,48 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
             code_str += f"\t{self.auxin_variable_label} = {aux_func_name}(t, " + ", ".join(
                 aux_func_params) + ")\n\n"
 
-        # Use common sub expressions to simplify function
-        # This is especially important if you're going to do auto-diff in julia
-        promoter_subsets, all_replacements, all_expressions =\
-            self.get_promoter_steady_state_exprs(use_cse=True)
+        if use_cse:
+            # Use common sub expressions to simplify function
+            # This is especially important if you're going to do auto-diff in julia
+            promoter_subsets, all_replacements, all_expressions =\
+                self.get_promoter_steady_state_exprs(use_cse=True)
 
-        if parameter_subs_dict is None:
-            parameter_subs_dict = self.get_parameter_substitution_dict()
+            if parameter_subs_dict is None:
+                parameter_subs_dict = self.get_parameter_substitution_dict()
 
-        for i, (promoter_vars, replacements, expressions) in \
-                enumerate(zip(promoter_subsets, all_replacements, all_expressions)):
-            dummy_vars = [v for (v, _) in replacements]
+            for i, (promoter_vars, replacements, expressions) in \
+                    enumerate(zip(promoter_subsets, all_replacements, all_expressions)):
+                dummy_vars = [v for (v, _) in replacements]
 
-            # Substitute in some extra characters so we don't shadow vars
-            dummy_sub_dict = {v: f"__{i}__{v}" for v in dummy_vars}
-            for r, expr in replacements:
-                code_str += f"\t{dummy_sub_dict[r]} =" +\
-                    f"{julia_code(expr.subs(dummy_sub_dict).subs(parameter_subs_dict))}" + "\n"
+                # Substitute in some extra characters so we don't shadow vars
+                dummy_sub_dict = {v: f"__{i}__{v}" for v in dummy_vars}
+                for r, expr in replacements:
+                    code_str += f"\t{dummy_sub_dict[r]} =" +\
+                        f"{julia_code(expr.subs(dummy_sub_dict).subs(parameter_subs_dict))}" + "\n"
 
-            code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " +\
-                julia_code(expressions[1].subs(dummy_sub_dict).subs(parameter_subs_dict)) + \
-                "\n\n"
+                code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " +\
+                    julia_code(expressions[1].subs(dummy_sub_dict).subs(parameter_subs_dict)) + \
+                    "\n\n"
+
+                code_str += f"\t {promoter_vars[0]} = " +\
+                    julia_code(expressions[0].subs(dummy_sub_dict).subs(
+                        parameter_subs_dict)) + "\n\n"
+        else:
+            promoter_var_lists, expression_lists =\
+                self.get_promoter_steady_state_exprs(use_cse=False)
+
+            if parameter_subs_dict is None:
+                parameter_subs_dict = self.get_parameter_substitution_dict()
+
+            for i, (promoter_vars, expressions) in \
+                    enumerate(zip(promoter_var_lists, expression_lists)):
+
+                code_str += "\t(" + ", ".join(promoter_vars[1:]) + ") = " +\
+                    julia_code(expressions[1].subs(parameter_subs_dict)) + \
+                    "\n\n"
 
             code_str += f"\t {promoter_vars[0]} = " +\
-                julia_code(expressions[0].subs(dummy_sub_dict).subs(
-                    parameter_subs_dict)) + "\n\n"
+                julia_code(expressions[0].subs( parameter_subs_dict)) + "\n\n"
 
         code_str += "\tdz .= (" + str(julia_code(odes))[1:-1] + ")\n\n"
         code_str += "end"
