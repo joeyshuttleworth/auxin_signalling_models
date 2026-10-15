@@ -1,7 +1,7 @@
 import functools
+import logging
 import random
 import string
-import logging
 
 import sympy as sp
 
@@ -26,7 +26,6 @@ class Variable:
 
         if category == "":
             logging.debug(f"Variable {name} has no category")
-            pass
 
     def __key(self):
         return (self.name, self.sympy_symbol)

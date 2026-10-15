@@ -1132,7 +1132,8 @@ class AuxinSignallingPathway:
         for reaction in self._reactions_set:
             if rate.name not in list(reaction.fwd_rates) + list(reaction.bwd_rates):
                 if strict:
-                    raise ValueError(f"Tried to remove parameter {rate_name} but it is present in reaction {reaction}")
+                    raise ValueError(
+                        f"Tried to remove parameter {rate_name} but it is present in reaction {reaction}")
                 reaction_set_list.append(reaction)
 
         self._reactions_set = set(reaction_set_list)

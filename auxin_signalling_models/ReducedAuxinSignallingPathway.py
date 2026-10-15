@@ -550,7 +550,7 @@ class ReducedAuxinSignallingPathway(AuxinSignallingPathway):
                     "\n\n"
 
             code_str += f"\t {promoter_vars[0]} = " +\
-                julia_code(expressions[0].subs( parameter_subs_dict)) + "\n\n"
+                julia_code(expressions[0].subs(parameter_subs_dict)) + "\n\n"
 
         code_str += "\tdz .= (" + str(julia_code(odes))[1:-1] + ")\n\n"
         code_str += "end"
